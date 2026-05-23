@@ -20,8 +20,7 @@ def load_data():
 
    nsw_df = pd.read_csv("ev_chargers_nsw_enriched.csv")
    ocm_df = pd.read_csv("openchargemap_au_enriched.csv")
-
-    return nsw_df, ocm_df
+   return nsw_df, ocm_df
 
 nsw_df, ocm_df = load_data()
 
