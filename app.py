@@ -18,13 +18,8 @@ st.set_page_config(
 @st.cache_data
 def load_data():
 
-    nsw_df = pd.read_csv(
-        "/content/ev_chargers_nsw_enriched.csv"
-    )
-
-    ocm_df = pd.read_csv(
-        "/content/openchargemap_au_enriched.csv"
-    )
+   nsw_df = pd.read_csv("ev_chargers_nsw_enriched.csv")
+   ocm_df = pd.read_csv("openchargemap_au_enriched.csv")
 
     return nsw_df, ocm_df
 
