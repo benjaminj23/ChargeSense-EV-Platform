@@ -93,7 +93,8 @@ page = st.sidebar.radio(
         "Infrastructure Overview",
         "Interactive Map",
         "Reliability Intelligence",
-        "Reservation Simulation"
+        "Reservation Simulation",
+        "Project Insights"
     ]
 )
 
@@ -330,3 +331,25 @@ elif page == "Reservation Simulation":
         st.success(f"Reservation confirmed for {selected_station}")
         st.info(f"Access window: {reservation_minutes} minutes")
         st.code("PASSCODE: CHARGE2026")
+elif page == "Project Insights":
+
+    st.title("Project Insights")
+
+    st.markdown("""
+    ### Key Takeaways
+
+    **1. Charger availability is not just about count.**  
+    Ultra-fast charger coverage matters more for long-distance travel and queue reduction.
+
+    **2. Reliability is a major product opportunity.**  
+    A charger may exist in the dataset, but stale verification data reduces user trust.
+
+    **3. Reservation systems can reduce queue uncertainty.**  
+    Short booking windows with temporary passcodes could help manage high-demand charging sites.
+
+    **4. Public EV datasets need cleaning.**  
+    Inconsistent state and location metadata show why infrastructure data products need strong data quality checks.
+
+    **5. ChargeSense can evolve into a decision-support tool.**  
+    Future versions could support charger investment planning, congestion forecasting, and smart route recommendations.
+    """)
