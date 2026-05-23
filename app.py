@@ -77,6 +77,7 @@ page = st.sidebar.radio(
         "Interactive Map",
         "Reliability Intelligence",
         "Reservation Simulation",
+        "Charger Recommendation",
         "Project Insights"
     ]
 )
@@ -295,7 +296,70 @@ elif page == "Reservation Simulation":
         st.write("Expiry time:", expiry_time.strftime("%Y-%m-%d %H:%M:%S"))
 
         st.code(f"ACCESS CODE: {access_code}")
+elif page == "Charger Recommendation":
 
+    st.title("Charger Recommendation Engine")
+
+    st.markdown("""
+    Find recommended charging stations based on charger power and reliability score.
+    """)
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        rec_state = st.selectbox(
+            "Select State",
+            sorted(ocm_df["state_clean"].dropna().unique()),
+            key="rec_state"
+        )
+
+    with col2:
+        min_rec_power = st.slider(
+            "Minimum Power (kW)",
+            0,
+            int(ocm_df["max_power_kw"].fillna(0).max()),
+            50
+        )
+
+    with col3:
+        min_reliability = st.slider(
+            "Minimum Reliability Score",
+            0,
+            100,
+            40
+        )
+
+    rec_df = ocm_df[
+        (ocm_df["state_clean"] == rec_state)
+        & (ocm_df["max_power_kw"].fillna(0) >= min_rec_power)
+        & (ocm_df["reliability_score"].fillna(0) >= min_reliability)
+    ].copy()
+
+    rec_df["recommendation_score"] = (
+        rec_df["max_power_kw"].fillna(0) * 0.6
+        + rec_df["reliability_score"].fillna(0) * 0.4
+    )
+
+    rec_df = rec_df.sort_values(
+        "recommendation_score",
+        ascending=False
+    )
+
+    st.subheader("Recommended Charging Stations")
+
+    st.dataframe(
+        rec_df[
+            [
+                "station_name",
+                "state_clean",
+                "max_power_kw",
+                "reliability_score",
+                "reliability_label",
+                "recommendation_score"
+            ]
+        ].head(15),
+        use_container_width=True
+    )
 elif page == "Project Insights":
 
     st.title("Project Insights")
