@@ -23,6 +23,45 @@ def load_data():
    return nsw_df, ocm_df
 
 nsw_df, ocm_df = load_data()
+nsw_df, ocm_df = load_data()
+
+ocm_df["date_last_verified"] = pd.to_datetime(
+    ocm_df["date_last_verified"],
+    errors="coerce"
+)
+
+latest_date = ocm_df["date_last_verified"].max()
+
+ocm_df["days_since_verified"] = (
+    latest_date - ocm_df["date_last_verified"]
+).dt.days
+
+ocm_df["is_recently_verified"] = (
+    ocm_df["is_recently_verified"]
+    .astype(str)
+    .str.lower()
+    .map({"true": 1, "false": 0})
+    .fillna(0)
+)
+
+ocm_df["data_quality_level"] = pd.to_numeric(
+    ocm_df["data_quality_level"],
+    errors="coerce"
+).fillna(0)
+
+ocm_df["reliability_score"] = (
+    (ocm_df["is_recently_verified"] * 50)
+    +
+    (ocm_df["data_quality_level"] * 30)
+    -
+    (ocm_df["days_since_verified"].fillna(365) * 0.2)
+)
+
+ocm_df["reliability_score"] = (
+    ocm_df["reliability_score"]
+    .clip(lower=0, upper=100)
+    .round(2)
+)
 
 # -----------------------------------
 # SIDEBAR
