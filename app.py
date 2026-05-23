@@ -1,19 +1,14 @@
-import streamlit as st
+import random
+from datetime import datetime, timedelta
+
 import pandas as pd
 import plotly.express as px
-
-# -----------------------------------
-# PAGE CONFIG
-# -----------------------------------
+import streamlit as st
 
 st.set_page_config(
     page_title="ChargeSense",
     layout="wide"
 )
-
-# -----------------------------------
-# LOAD DATA
-# -----------------------------------
 
 @st.cache_data
 def load_data():
@@ -23,14 +18,7 @@ def load_data():
 
 nsw_df, ocm_df = load_data()
 
-# -----------------------------------
-# DATA PREP
-# -----------------------------------
-
-ocm_df["max_power_kw"] = pd.to_numeric(
-    ocm_df["max_power_kw"],
-    errors="coerce"
-)
+ocm_df["max_power_kw"] = pd.to_numeric(ocm_df["max_power_kw"], errors="coerce")
 
 ocm_df["date_last_verified"] = pd.to_datetime(
     ocm_df["date_last_verified"],
@@ -75,14 +63,9 @@ def reliability_label(score):
         return "Medium"
     elif score > 0:
         return "Low"
-    else:
-        return "Unknown / Stale"
+    return "Unknown / Stale"
 
 ocm_df["reliability_label"] = ocm_df["reliability_score"].apply(reliability_label)
-
-# -----------------------------------
-# SIDEBAR
-# -----------------------------------
 
 st.sidebar.title("⚡ ChargeSense")
 
@@ -98,10 +81,6 @@ page = st.sidebar.radio(
     ]
 )
 
-# -----------------------------------
-# HOME
-# -----------------------------------
-
 if page == "Home":
 
     st.title("⚡ ChargeSense")
@@ -113,10 +92,6 @@ if page == "Home":
     """)
 
     st.success("Platform loaded successfully")
-
-# -----------------------------------
-# INFRASTRUCTURE OVERVIEW
-# -----------------------------------
 
 elif page == "Infrastructure Overview":
 
@@ -153,10 +128,6 @@ elif page == "Infrastructure Overview":
     st.subheader("EV Charging Stations by State")
     st.bar_chart(state_summary.set_index("state_clean"))
 
-# -----------------------------------
-# INTERACTIVE MAP
-# -----------------------------------
-
 elif page == "Interactive Map":
 
     st.title("Interactive Charger Map")
@@ -188,18 +159,8 @@ elif page == "Interactive Map":
         & (ocm_df["max_power_kw"].fillna(0) >= min_power)
     ].copy()
 
-    map_df = map_df.dropna(subset=["latitude", "longitude"])
-
-    map_df["latitude"] = pd.to_numeric(
-        map_df["latitude"],
-        errors="coerce"
-    )
-
-    map_df["longitude"] = pd.to_numeric(
-        map_df["longitude"],
-        errors="coerce"
-    )
-
+    map_df["latitude"] = pd.to_numeric(map_df["latitude"], errors="coerce")
+    map_df["longitude"] = pd.to_numeric(map_df["longitude"], errors="coerce")
     map_df = map_df.dropna(subset=["latitude", "longitude"])
 
     map_df["plot_size"] = (
@@ -240,10 +201,6 @@ elif page == "Interactive Map":
         )
 
         st.plotly_chart(fig, use_container_width=True)
-
-# -----------------------------------
-# RELIABILITY INTELLIGENCE
-# -----------------------------------
 
 elif page == "Reliability Intelligence":
 
@@ -289,17 +246,13 @@ elif page == "Reliability Intelligence":
         reliability_dist.set_index("Reliability Label")
     )
 
-# -----------------------------------
-# RESERVATION SIMULATION
-# -----------------------------------
-
 elif page == "Reservation Simulation":
 
     st.title("Reservation Simulation")
 
     st.markdown("""
     Simulate a short reservation window for high-priority EV charging stations.
-    This is a prototype of the booking/passcode concept.
+    This is a prototype of the booking/access-code concept.
     """)
 
     top_sites = (
@@ -326,11 +279,23 @@ elif page == "Reservation Simulation":
         20
     )
 
+    def generate_access_code():
+        return str(random.randint(1000, 9999))
+
     if st.button("Simulate Reservation"):
+
+        booking_time = datetime.now()
+        expiry_time = booking_time + timedelta(minutes=reservation_minutes)
+        access_code = generate_access_code()
 
         st.success(f"Reservation confirmed for {selected_station}")
         st.info(f"Access window: {reservation_minutes} minutes")
-        st.code("PASSCODE: CHARGE2026")
+
+        st.write("Booking time:", booking_time.strftime("%Y-%m-%d %H:%M:%S"))
+        st.write("Expiry time:", expiry_time.strftime("%Y-%m-%d %H:%M:%S"))
+
+        st.code(f"ACCESS CODE: {access_code}")
+
 elif page == "Project Insights":
 
     st.title("Project Insights")
@@ -345,7 +310,7 @@ elif page == "Project Insights":
     A charger may exist in the dataset, but stale verification data reduces user trust.
 
     **3. Reservation systems can reduce queue uncertainty.**  
-    Short booking windows with temporary passcodes could help manage high-demand charging sites.
+    Short booking windows with temporary access codes could help manage high-demand charging sites.
 
     **4. Public EV datasets need cleaning.**  
     Inconsistent state and location metadata show why infrastructure data products need strong data quality checks.
