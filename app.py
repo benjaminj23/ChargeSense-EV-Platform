@@ -1,7 +1,7 @@
 
 import streamlit as st
 import pandas as pd
-
+import plotly.express as px
 # -----------------------------------
 # PAGE CONFIG
 # -----------------------------------
@@ -35,6 +35,7 @@ page = st.sidebar.radio(
     [
         "Home",
         "Infrastructure Overview",
+        "Interactive Map",
         "Reliability Intelligence",
         "Reservation Simulation"
     ]
@@ -120,7 +121,61 @@ elif page == "Infrastructure Overview":
     st.bar_chart(
         state_summary.set_index("state_clean")
     )
+elif page == "Interactive Map":
 
+    st.title("Interactive Charger Map")
+
+    st.markdown(
+        "Explore EV charging stations across Australia using OpenChargeMap data."
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        selected_state = st.selectbox(
+            "Select State",
+            sorted(ocm_df["state_clean"].dropna().unique())
+        )
+
+    with col2:
+        min_power = st.slider(
+            "Minimum Charger Power (kW)",
+            0,
+            int(ocm_df["max_power_kw"].fillna(0).max()),
+            0
+        )
+
+    map_df = ocm_df[
+        (ocm_df["state_clean"] == selected_state)
+        &
+        (ocm_df["max_power_kw"].fillna(0) >= min_power)
+    ].copy()
+
+    st.write(f"Showing {len(map_df)} charging stations")
+
+    fig = px.scatter_mapbox(
+        map_df,
+        lat="latitude",
+        lon="longitude",
+        hover_name="station_name",
+        hover_data=[
+            "state_clean",
+            "max_power_kw",
+            "speed_category",
+            "reliability_score"
+        ],
+        color="speed_category",
+        size="max_power_kw",
+        zoom=5,
+        height=650
+    )
+
+    fig.update_layout(
+        mapbox_style="open-street-map",
+        margin={"r":0,"t":0,"l":0,"b":0}
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 # -----------------------------------
 # RELIABILITY INTELLIGENCE
 # -----------------------------------
