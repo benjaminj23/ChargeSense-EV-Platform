@@ -63,6 +63,18 @@ ocm_df["reliability_score"] = (
     .round(2)
 )
 
+def reliability_label(score):
+    if score >= 70:
+        return "High"
+    elif score >= 40:
+        return "Medium"
+    elif score > 0:
+        return "Low"
+    else:
+        return "Unknown / Stale"
+
+ocm_df["reliability_label"] = ocm_df["reliability_score"].apply(reliability_label)
+
 # -----------------------------------
 # SIDEBAR
 # -----------------------------------
