@@ -1,0 +1,210 @@
+
+import streamlit as st
+import pandas as pd
+
+# -----------------------------------
+# PAGE CONFIG
+# -----------------------------------
+
+st.set_page_config(
+    page_title="ChargeSense",
+    layout="wide"
+)
+
+# -----------------------------------
+# LOAD DATA
+# -----------------------------------
+
+@st.cache_data
+def load_data():
+
+    nsw_df = pd.read_csv(
+        "/content/ev_chargers_nsw_enriched.csv"
+    )
+
+    ocm_df = pd.read_csv(
+        "/content/openchargemap_au_enriched.csv"
+    )
+
+    return nsw_df, ocm_df
+
+nsw_df, ocm_df = load_data()
+
+# -----------------------------------
+# SIDEBAR
+# -----------------------------------
+
+st.sidebar.title("⚡ ChargeSense")
+
+page = st.sidebar.radio(
+    "Navigate",
+    [
+        "Home",
+        "Infrastructure Overview",
+        "Reliability Intelligence",
+        "Reservation Simulation"
+    ]
+)
+
+# -----------------------------------
+# HOME
+# -----------------------------------
+
+if page == "Home":
+
+    st.title("⚡ ChargeSense")
+    st.subheader(
+        "EV Infrastructure Intelligence Platform"
+    )
+
+    st.markdown("""
+    Explore EV charging infrastructure,
+    congestion risk,
+    reliability intelligence,
+    and reservation simulation.
+    """)
+
+    st.success("Platform loaded successfully")
+
+# -----------------------------------
+# INFRASTRUCTURE OVERVIEW
+# -----------------------------------
+
+elif page == "Infrastructure Overview":
+
+    st.title("Infrastructure Overview")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric(
+            "Total Stations",
+            len(ocm_df)
+        )
+
+    with col2:
+        st.metric(
+            "Ultra-fast Chargers",
+            len(
+                ocm_df[
+                    ocm_df["max_power_kw"] >= 150
+                ]
+            )
+        )
+
+    with col3:
+        st.metric(
+            "Average Charger Power",
+            round(
+                ocm_df["max_power_kw"].mean(),
+                1
+            )
+        )
+
+    with col4:
+        st.metric(
+            "States Covered",
+            ocm_df["state_clean"].nunique()
+        )
+
+    st.divider()
+
+    state_summary = (
+        ocm_df.groupby("state_clean")
+        .size()
+        .reset_index(name="stations")
+        .sort_values(
+            "stations",
+            ascending=False
+        )
+    )
+
+    st.subheader(
+        "EV Charging Stations by State"
+    )
+
+    st.bar_chart(
+        state_summary.set_index("state_clean")
+    )
+
+# -----------------------------------
+# RELIABILITY INTELLIGENCE
+# -----------------------------------
+
+elif page == "Reliability Intelligence":
+
+    st.title("Reliability Intelligence")
+
+    reliability_view = (
+        ocm_df[
+            [
+                "station_name",
+                "state_clean",
+                "max_power_kw",
+                "reliability_score",
+                "days_since_verified"
+            ]
+        ]
+        .sort_values(
+            "reliability_score",
+            ascending=False
+        )
+    )
+
+    st.subheader(
+        "Top Reliable Charging Stations"
+    )
+
+    st.dataframe(
+        reliability_view.head(20),
+        use_container_width=True
+    )
+
+# -----------------------------------
+# RESERVATION SIMULATION
+# -----------------------------------
+
+elif page == "Reservation Simulation":
+
+    st.title("Reservation Simulation")
+
+    top_sites = (
+        nsw_df[
+            [
+                "Station_name",
+                "Operator",
+                "reservation_need_index"
+            ]
+        ]
+        .sort_values(
+            "reservation_need_index",
+            ascending=False
+        )
+    )
+
+    selected_station = st.selectbox(
+        "Select Charging Station",
+        top_sites["Station_name"].dropna().unique()
+    )
+
+    reservation_minutes = st.slider(
+        "Reservation Duration (minutes)",
+        15,
+        60,
+        20
+    )
+
+    if st.button("Simulate Reservation"):
+
+        st.success(
+            f"Reservation confirmed for {selected_station}"
+        )
+
+        st.info(
+            f"Access window: {reservation_minutes} minutes"
+        )
+
+        st.code(
+            "PASSCODE: CHARGE2026"
+        )
+
