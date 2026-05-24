@@ -1911,7 +1911,7 @@ elif page == "Real Route Optimizer":
                 "lat": route_df["latitude"].mean(),
                 "lon": route_df["longitude"].mean()
                 },
-                zoom=10,
+                zoom=8,
                 height=700
             )
 
