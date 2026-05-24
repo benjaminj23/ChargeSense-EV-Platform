@@ -1713,7 +1713,56 @@ elif page == "Real Route Optimizer":
                 f"Found {len(near_route_df)} chargers within "
                 f"{route_buffer_km} km of the route."
             )
+            st.subheader("Corridor Risk Score")
+            st.markdown("""
+            The **Corridor Risk Score** estimates how risky an EV route is based on charging infrastructure along the selected route.
 
+            It considers:
+            - how many chargers are near the route
+            - average charger reliability
+            - estimated availability
+            - charger coverage along the route
+            - whether the route has enough nearby charging options
+
+            A higher score means the route may have higher charging risk, weaker infrastructure coverage, or lower charger trust.
+            """)
+
+            corridor_charger_count = len(near_route_df)
+           
+            avg_corridor_reliability = (   near_route_df["reliability_score"]  .fillna(0).mean())
+
+            avg_corridor_availability = ( near_route_df["availability_score"] .fillna(0) .mean())
+
+            chargers_per_100km = ( corridor_charger_count / distance_km) * 100
+
+            corridor_risk_score = ( (100 - min(chargers_per_100km * 10, 100)) * 0.4 + (100 - avg_corridor_reliability) * 0.35 + (100 - max(avg_corridor_availability, 0)) * 0.25)
+
+            corridor_risk_score = round( max(0, min(corridor_risk_score, 100)),2)    
+
+            if corridor_risk_score >= 70:
+              corridor_risk_label = "High Risk"
+            elif corridor_risk_score >= 40:
+              corridor_risk_label = "Medium Risk"
+            else:
+              corridor_risk_label = "Low Risk"
+
+            risk_col1, risk_col2, risk_col3, risk_col4 = st.columns(4)
+
+            risk_col1.metric(  "Corridor Risk", corridor_risk_label)
+
+            risk_col2.metric(  "Risk Score", corridor_risk_score)
+
+            risk_col3.metric( "Chargers Near Route",  corridor_charger_count)
+
+            risk_col4.metric(  "Chargers / 100 km", round(chargers_per_100km, 1))
+
+            risk_col5, risk_col6 = st.columns(2)
+
+            risk_col5.metric(  "Avg Reliability",   round(avg_corridor_reliability, 1))
+
+            risk_col6.metric(  "Avg Availability Score",  round(avg_corridor_availability, 1))
+
+            
             st.subheader("Recommended Charging Stops Near Route")
 
             st.caption(
