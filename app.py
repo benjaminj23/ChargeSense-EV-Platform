@@ -184,6 +184,7 @@ page = st.sidebar.radio(
         "Project Insights"
     ],
 )
+)
 
 # -----------------------------
 # HOME
