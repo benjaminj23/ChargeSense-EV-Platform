@@ -1319,7 +1319,6 @@ elif page == "Real Route Optimizer":
         c = 2 * math.asin(math.sqrt(a))
 
         return radius_km * c
-    
 
     def geocode_place(place_name):
         url = "https://nominatim.openstreetmap.org/search"
@@ -1366,7 +1365,6 @@ elif page == "Real Route Optimizer":
             "latitude": float(result["lat"])
         }
 
-
     def simulated_availability(row):
         reliability = row.get("reliability_score", 0)
 
@@ -1379,12 +1377,12 @@ elif page == "Real Route Optimizer":
         else:
             return "Offline"
 
-
     route_input_mode = st.radio(
         "Route Input Mode",
         ["Major City", "Custom Place"],
         horizontal=True
     )
+
     if route_input_mode == "Major City":
 
         cities = sorted(city_coordinates.keys())
@@ -1440,11 +1438,6 @@ elif page == "Real Route Optimizer":
 
     battery_kwh = ev_profiles[selected_ev]["battery_kwh"]
     ev_range_km = ev_profiles[selected_ev]["range_km"]
-    weather_range_multiplier = 1.0
-
-
-
-    adjusted_ev_range_km = (  ev_range_km * weather_range_multiplier)
 
     st.info(
         f"{selected_ev}: {battery_kwh} kWh battery, approx. {ev_range_km} km driving range."
@@ -1454,22 +1447,6 @@ elif page == "Real Route Optimizer":
         "Charging Strategy",
         ["Conservative", "Fastest Trip", "Fewest Stops"]
     )
-    weather_mode = st.selectbox(
-    "Weather Conditions",
-    [
-        "Normal",
-        "Cold Weather",
-        "Heavy Rain",
-        "Extreme Heat"
-    ]
-    )
-
-    if weather_mode == "Cold Weather":
-      weather_range_multiplier = 0.82
-    elif weather_mode == "Heavy Rain":
-      weather_range_multiplier = 0.88
-    elif weather_mode == "Extreme Heat":
-      weather_range_multiplier = 0.90
 
     if charging_strategy == "Conservative":
         dynamic_charge_to_percent = 80
@@ -1477,6 +1454,29 @@ elif page == "Real Route Optimizer":
         dynamic_charge_to_percent = 60
     else:
         dynamic_charge_to_percent = 90
+
+    weather_mode = st.selectbox(
+        "Weather Conditions",
+        [
+            "Normal",
+            "Cold Weather",
+            "Heavy Rain",
+            "Extreme Heat"
+        ]
+    )
+
+    weather_range_multiplier = 1.0
+
+    if weather_mode == "Cold Weather":
+        weather_range_multiplier = 0.82
+    elif weather_mode == "Heavy Rain":
+        weather_range_multiplier = 0.88
+    elif weather_mode == "Extreme Heat":
+        weather_range_multiplier = 0.90
+
+    adjusted_ev_range_km = (
+        ev_range_km * weather_range_multiplier
+    )
 
     col1, col2 = st.columns(2)
 
@@ -1519,6 +1519,16 @@ elif page == "Real Route Optimizer":
             "Target Battery Strategy",
             f"{dynamic_charge_to_percent}%"
         )
+
+    st.subheader("Cost Settings")
+
+    electricity_price_per_kwh = st.slider(
+        "Estimated Public Charging Price ($/kWh)",
+        0.20,
+        1.20,
+        0.65,
+        0.05
+    )
 
     if st.button("Generate Real Route"):
 
@@ -1585,6 +1595,7 @@ elif page == "Real Route Optimizer":
                     params=params,
                     timeout=30
                 )
+
             except requests.exceptions.RequestException as e:
                 st.error("Could not connect to OSRM routing service.")
                 st.write(str(e))
@@ -1630,26 +1641,11 @@ elif page == "Real Route Optimizer":
             )
 
             metric_col3.metric(
-                "Adjusted  EV Range",
+                "Adjusted EV Range",
                 f"{round(adjusted_ev_range_km, 1)} km"
             )
 
             route_map_df = ocm_df.copy()
-
-            route_map_df["availability_status"] = (
-                route_map_df.apply(simulated_availability, axis=1)
-            )
-
-            availability_weight = {
-                "Available": 100,
-                "Busy": 30,
-                "Unknown": 0,
-                "Offline": -200
-            }
-
-            route_map_df["availability_score"] = (
-                route_map_df["availability_status"].map(availability_weight)
-            )
 
             route_map_df["latitude"] = pd.to_numeric(
                 route_map_df["latitude"],
@@ -1673,6 +1669,21 @@ elif page == "Real Route Optimizer":
             route_map_df["route_score"] = (
                 route_map_df["max_power_kw"].fillna(0) * 0.6
                 + route_map_df["reliability_score"].fillna(0) * 0.4
+            )
+
+            route_map_df["availability_status"] = (
+                route_map_df.apply(simulated_availability, axis=1)
+            )
+
+            availability_weight = {
+                "Available": 100,
+                "Busy": 30,
+                "Unknown": 0,
+                "Offline": -200
+            }
+
+            route_map_df["availability_score"] = (
+                route_map_df["availability_status"].map(availability_weight)
             )
 
             sampled_route = route_df.iloc[
@@ -1701,7 +1712,11 @@ elif page == "Real Route Optimizer":
                 route_map_df["distance_to_route_km"] <= route_buffer_km
             ].copy()
 
-            near_route_df["route_recommendation_score"] = (  near_route_df["route_score"].fillna(0) + near_route_df["availability_score"].fillna(0) - (near_route_df["distance_to_route_km"] * 10))
+            near_route_df["route_recommendation_score"] = (
+                near_route_df["route_score"].fillna(0)
+                + near_route_df["availability_score"].fillna(0)
+                - (near_route_df["distance_to_route_km"] * 10)
+            )
 
             recommended_stops = (
                 near_route_df
@@ -1713,7 +1728,9 @@ elif page == "Real Route Optimizer":
                 f"Found {len(near_route_df)} chargers within "
                 f"{route_buffer_km} km of the route."
             )
+
             st.subheader("Corridor Risk Score")
+
             st.markdown("""
             The **Corridor Risk Score** estimates how risky an EV route is based on charging infrastructure along the selected route.
 
@@ -1728,46 +1745,87 @@ elif page == "Real Route Optimizer":
             """)
 
             corridor_charger_count = len(near_route_df)
-           
-            avg_corridor_reliability = (   near_route_df["reliability_score"]  .fillna(0).mean())
 
-            avg_corridor_availability = ( near_route_df["availability_score"] .fillna(0) .mean())
+            avg_corridor_reliability = (
+                near_route_df["reliability_score"]
+                .fillna(0)
+                .mean()
+            )
 
-            chargers_per_100km = ( corridor_charger_count / distance_km) * 100
+            avg_corridor_availability = (
+                near_route_df["availability_score"]
+                .fillna(0)
+                .mean()
+            )
 
-            corridor_risk_score = ( (100 - min(chargers_per_100km * 10, 100)) * 0.4 + (100 - avg_corridor_reliability) * 0.35 + (100 - max(avg_corridor_availability, 0)) * 0.25)
+            chargers_per_100km = (
+                corridor_charger_count / distance_km
+            ) * 100
 
-            corridor_risk_score = round( max(0, min(corridor_risk_score, 100)),2)    
+            corridor_risk_score = (
+                (100 - min(chargers_per_100km * 10, 100)) * 0.4
+                + (100 - avg_corridor_reliability) * 0.35
+                + (100 - max(avg_corridor_availability, 0)) * 0.25
+            )
+
+            corridor_risk_score = round(
+                max(0, min(corridor_risk_score, 100)),
+                2
+            )
 
             if corridor_risk_score >= 70:
-              corridor_risk_label = "High Risk"
+                corridor_risk_label = "High Risk"
             elif corridor_risk_score >= 40:
-              corridor_risk_label = "Medium Risk"
+                corridor_risk_label = "Medium Risk"
             else:
-              corridor_risk_label = "Low Risk"
+                corridor_risk_label = "Low Risk"
 
             risk_col1, risk_col2, risk_col3, risk_col4 = st.columns(4)
 
-            risk_col1.metric(  "Corridor Risk", corridor_risk_label)
+            risk_col1.metric(
+                "Corridor Risk",
+                corridor_risk_label
+            )
 
-            risk_col2.metric(  "Risk Score", corridor_risk_score)
+            risk_col2.metric(
+                "Risk Score",
+                corridor_risk_score
+            )
 
-            risk_col3.metric( "Chargers Near Route",  corridor_charger_count)
+            risk_col3.metric(
+                "Chargers Near Route",
+                corridor_charger_count
+            )
 
-            risk_col4.metric(  "Chargers / 100 km", round(chargers_per_100km, 1))
+            risk_col4.metric(
+                "Chargers / 100 km",
+                round(chargers_per_100km, 1)
+            )
 
             risk_col5, risk_col6 = st.columns(2)
 
-            risk_col5.metric(  "Avg Reliability",   round(avg_corridor_reliability, 1))
+            risk_col5.metric(
+                "Avg Reliability",
+                round(avg_corridor_reliability, 1)
+            )
 
-            risk_col6.metric(  "Avg Availability Score",  round(avg_corridor_availability, 1))
-            st.caption(  "Interpretation: A route can have many chargers but still show medium or high corridor risk if reliability, data freshness, or estimated availability is weak.")
+            risk_col6.metric(
+                "Avg Availability Score",
+                round(avg_corridor_availability, 1)
+            )
 
-            
+            st.caption(
+                "Interpretation: A route can have many chargers but still show medium or high corridor risk if reliability, data freshness, or estimated availability is weak."
+            )
+
+            st.caption(
+                "Corridor risk uses public charger data, reliability indicators, and simulated availability. It is a planning estimate, not live operational risk."
+            )
+
             st.subheader("Recommended Charging Stops Near Route")
 
             st.caption(
-              "Availability status is currently simulated from reliability indicators and data freshness. Future versions can replace this with live operator API data."
+                "Availability status is currently simulated from reliability indicators and data freshness. Future versions can replace this with live operator API data."
             )
 
             if len(recommended_stops) == 0:
@@ -1930,6 +1988,10 @@ elif page == "Real Route Optimizer":
                     energy_needed_kwh / effective_charger_power_kw
                 ) * 60
 
+                estimated_charge_cost_aud = (
+                    energy_needed_kwh * electricity_price_per_kwh
+                )
+
                 current_battery_percent = departure_battery_percent
                 previous_distance_km = target_distance
 
@@ -1948,6 +2010,7 @@ elif page == "Real Route Optimizer":
                     "departure_battery_%": round(departure_battery_percent, 1),
                     "estimated_charge_kwh": round(energy_needed_kwh, 1),
                     "estimated_charge_time_min": round(estimated_charge_time_min, 1),
+                    "estimated_charge_cost_aud": round(estimated_charge_cost_aud, 2),
                     "distance_to_target_km": round(
                         best_stop["distance_to_target_km"],
                         1
@@ -1967,6 +2030,11 @@ elif page == "Real Route Optimizer":
                     "No charging stop required based on selected EV range."
                 )
 
+                total_charging_time_min = 0
+                total_trip_time_hours = duration_hours
+                total_charging_cost_aud = 0
+                cost_per_100km = 0
+
             else:
 
                 sequence_df = pd.DataFrame(sequence_stops)
@@ -1979,7 +2047,15 @@ elif page == "Real Route Optimizer":
                     duration_hours + (total_charging_time_min / 60)
                 )
 
-                summary_col1, summary_col2, summary_col3 = st.columns(3)
+                total_charging_cost_aud = (
+                    sequence_df["estimated_charge_cost_aud"].sum()
+                )
+
+                cost_per_100km = (
+                    total_charging_cost_aud / distance_km
+                ) * 100
+
+                summary_col1, summary_col2, summary_col3, summary_col4, summary_col5 = st.columns(5)
 
                 summary_col1.metric(
                     "Charging Stops",
@@ -1996,10 +2072,30 @@ elif page == "Real Route Optimizer":
                     f"{round(total_trip_time_hours, 1)} hrs"
                 )
 
+                summary_col4.metric(
+                    "Charging Cost",
+                    f"${round(total_charging_cost_aud, 2)}"
+                )
+
+                summary_col5.metric(
+                    "Cost / 100 km",
+                    f"${round(cost_per_100km, 2)}"
+                )
+
                 st.dataframe(
                     sequence_df,
                     use_container_width=True
                 )
+
+                csv_sequence = sequence_df.to_csv(index=False)
+
+                st.download_button(
+                    "Download Stop Sequence CSV",
+                    csv_sequence,
+                    file_name="chargesense_stop_sequence.csv",
+                    mime="text/csv"
+                )
+
             st.subheader("Trip Plan Summary")
 
             if len(sequence_stops) > 0:
@@ -2016,19 +2112,22 @@ elif page == "Real Route Optimizer":
                 cost_per_100km_summary = 0
 
             trip_summary = f"""
-           Route: {start_label} → {destination_label}
-           EV: {selected_ev}
-           Distance: {round(distance_km, 1)} km
-           Drive Time: {round(duration_hours, 1)} hrs
-           Charging Stops: {charging_stops_count}
-           Total Charging Time: {charging_time_summary} min
-           Estimated Charging Cost: ${charging_cost_summary}
-           Estimated Cost per 100 km: ${cost_per_100km_summary}
-           Estimated Total Trip Time: {total_trip_time_summary} hrs
-           Strategy: {charging_strategy}
-           Weather: {weather_mode}
-           Charging Price Used: ${electricity_price_per_kwh}/kWh
-           """
+Route: {start_label} → {destination_label}
+EV: {selected_ev}
+Distance: {round(distance_km, 1)} km
+Drive Time: {round(duration_hours, 1)} hrs
+Adjusted EV Range: {round(adjusted_ev_range_km, 1)} km
+Weather: {weather_mode}
+Strategy: {charging_strategy}
+Charging Stops: {charging_stops_count}
+Total Charging Time: {charging_time_summary} min
+Estimated Charging Cost: ${charging_cost_summary}
+Estimated Cost per 100 km: ${cost_per_100km_summary}
+Estimated Total Trip Time: {total_trip_time_summary} hrs
+Charging Price Used: ${electricity_price_per_kwh}/kWh
+Corridor Risk: {corridor_risk_label}
+Corridor Risk Score: {corridor_risk_score}
+"""
 
             st.code(trip_summary)
 
@@ -2037,10 +2136,13 @@ elif page == "Real Route Optimizer":
                 trip_summary,
                 file_name="chargesense_trip_plan.txt"
             )
+
             st.subheader("Route Map with Recommended Chargers")
 
             recommended_stops["plot_size"] = (
-                recommended_stops["max_power_kw"].fillna(1).clip(lower=5, upper=350)
+                recommended_stops["max_power_kw"]
+                .fillna(1)
+                .clip(lower=5, upper=350)
             )
 
             fig = px.scatter_mapbox(
@@ -2053,6 +2155,8 @@ elif page == "Real Route Optimizer":
                     "state_clean": True,
                     "max_power_kw": True,
                     "reliability_score": True,
+                    "availability_status": True,
+                    "availability_score": True,
                     "route_score": True,
                     "route_recommendation_score": True,
                     "distance_to_route_km": True,
@@ -2063,8 +2167,8 @@ elif page == "Real Route Optimizer":
                 color="route_recommendation_score",
                 size="plot_size",
                 center={
-                "lat": route_df["latitude"].mean(),
-                "lon": route_df["longitude"].mean()
+                    "lat": route_df["latitude"].mean(),
+                    "lon": route_df["longitude"].mean()
                 },
                 zoom=6,
                 height=700
@@ -2092,6 +2196,9 @@ elif page == "Real Route Optimizer":
                 fig,
                 use_container_width=True
             )
+
+
+
 # -----------------------------
 # PROJECT INSIGHTS
 # -----------------------------
