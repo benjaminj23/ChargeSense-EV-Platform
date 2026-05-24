@@ -1735,7 +1735,7 @@ elif page == "Real Route Optimizer":
         with st.spinner("Calculating route..."):
 
             url = (
-                "https://api.openrouteservice.org/v2/directions/driving-car/geojson"
+                "https://api.heidelberg.org/v2/directions/driving-car/geojson"
             )
 
             headers = {
