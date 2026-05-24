@@ -95,7 +95,7 @@ state_metrics = (
     .agg(
         total_stations=("station_name", "count"),
         avg_power_kw=("max_power_kw", "mean"),
-        avg_reliability_normalized=( "reliability_score_normalized", "mean"),,
+        avg_reliability_normalized=( "reliability_score_normalized", "mean"),
         ultra_fast_sites=("speed_category", lambda x: (x == "Ultra-fast DC").sum()),
         population=("population", "first"),
     )
