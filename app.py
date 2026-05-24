@@ -1254,10 +1254,9 @@ elif page == "Real Route Optimizer":
     st.title("🛰️ Real Route Optimizer")
 
     st.markdown("""
-    Generate a real driving route between Australian cities and identify high-quality
-    EV charging stations near the route.
+    Generate a real driving route and identify high-quality EV charging stations near the route.
 
-    This version uses OSRM public routing data for route geometry.
+    Use **Major City Mode** for quick routes, or **Custom Place Mode** for suburb/place-level routing.
     """)
 
     city_coordinates = {
@@ -1297,23 +1296,107 @@ elif page == "Real Route Optimizer":
 
         return radius_km * c
 
-    cities = sorted(city_coordinates.keys())
+    def geocode_place(place_name):
+        url = "https://nominatim.openstreetmap.org/search"
 
-    col1, col2 = st.columns(2)
+        params = {
+            "q": place_name,
+            "format": "json",
+            "limit": 1,
+            "countrycodes": "au"
+        }
 
-    with col1:
-        start_city = st.selectbox(
-            "Start City",
-            cities,
-            index=cities.index("Sydney")
-        )
+        headers = {
+            "User-Agent": "ChargeSenseEVPlatform/1.0"
+        }
 
-    with col2:
-        destination_city = st.selectbox(
-            "Destination City",
-            cities,
-            index=cities.index("Melbourne")
-        )
+        try:
+            response = requests.get(
+                url,
+                params=params,
+                headers=headers,
+                timeout=20
+            )
+
+        except requests.exceptions.RequestException as e:
+            st.error("Could not connect to geocoding service.")
+            st.write(str(e))
+            return None
+
+        if response.status_code != 200:
+            st.error(f"Geocoding Error {response.status_code}")
+            st.write(response.text)
+            return None
+
+        results = response.json()
+
+        if len(results) == 0:
+            return None
+
+        result = results[0]
+
+        return {
+            "display_name": result.get("display_name", place_name),
+            "longitude": float(result["lon"]),
+            "latitude": float(result["lat"])
+        }
+
+    route_input_mode = st.radio(
+        "Route Input Mode",
+        [
+            "Major City",
+            "Custom Place"
+        ],
+        horizontal=True
+    )
+
+    if route_input_mode == "Major City":
+
+        cities = sorted(city_coordinates.keys())
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            start_city = st.selectbox(
+                "Start City",
+                cities,
+                index=cities.index("Sydney")
+            )
+
+        with col2:
+            destination_city = st.selectbox(
+                "Destination City",
+                cities,
+                index=cities.index("Melbourne")
+            )
+
+        start_label = start_city
+        destination_label = destination_city
+
+        start_coords = city_coordinates[start_city]
+        end_coords = city_coordinates[destination_city]
+
+    else:
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            start_place = st.text_input(
+                "Start Location",
+                "Kensington NSW"
+            )
+
+        with col2:
+            destination_place = st.text_input(
+                "Destination",
+                "Wollongong NSW"
+            )
+
+        start_label = start_place
+        destination_label = destination_place
+
+        start_coords = None
+        end_coords = None
 
     route_buffer_km = st.slider(
         "Maximum Distance from Route (km)",
@@ -1336,328 +1419,352 @@ elif page == "Real Route Optimizer":
         50
     )
 
-    start_coords = city_coordinates[start_city]
-    end_coords = city_coordinates[destination_city]
+    if st.button("Generate Real Route"):
 
-    if start_city == destination_city:
-        st.warning("Start city and destination city cannot be the same.")
+        if route_input_mode == "Major City":
 
-    else:
+            if start_label == destination_label:
+                st.warning("Start city and destination city cannot be the same.")
+                st.stop()
 
-        if st.button("Generate Real Route"):
+        else:
 
-            with st.spinner("Calculating route..."):
+            if start_place.strip() == "" or destination_place.strip() == "":
+                st.warning("Please enter both a start location and destination.")
+                st.stop()
 
-                url = (
-                    f"https://router.project-osrm.org/route/v1/driving/"
-                    f"{start_coords[0]},{start_coords[1]};"
-                    f"{end_coords[0]},{end_coords[1]}"
+            with st.spinner("Finding locations..."):
+
+                start_geo = geocode_place(start_place)
+                destination_geo = geocode_place(destination_place)
+
+            if start_geo is None:
+                st.error(f"Could not find start location: {start_place}")
+                st.stop()
+
+            if destination_geo is None:
+                st.error(f"Could not find destination: {destination_place}")
+                st.stop()
+
+            start_coords = [
+                start_geo["longitude"],
+                start_geo["latitude"]
+            ]
+
+            end_coords = [
+                destination_geo["longitude"],
+                destination_geo["latitude"]
+            ]
+
+            start_label = start_geo["display_name"]
+            destination_label = destination_geo["display_name"]
+
+            st.info(f"Start matched to: {start_label}")
+            st.info(f"Destination matched to: {destination_label}")
+
+        with st.spinner("Calculating route..."):
+
+            url = (
+                f"https://router.project-osrm.org/route/v1/driving/"
+                f"{start_coords[0]},{start_coords[1]};"
+                f"{end_coords[0]},{end_coords[1]}"
+            )
+
+            params = {
+                "overview": "full",
+                "geometries": "geojson"
+            }
+
+            try:
+                response = requests.get(
+                    url,
+                    params=params,
+                    timeout=30
                 )
 
-                params = {
-                    "overview": "full",
-                    "geometries": "geojson"
-                }
+            except requests.exceptions.RequestException as e:
+                st.error("Could not connect to OSRM routing service.")
+                st.write(str(e))
+                st.stop()
 
-                try:
-                    response = requests.get(
-                        url,
-                        params=params,
-                        timeout=30
-                    )
+            if response.status_code != 200:
+                st.error(f"OSRM Error {response.status_code}")
+                st.write(response.text)
+                st.stop()
 
-                except requests.exceptions.RequestException as e:
-                    st.error("Could not connect to OSRM routing service.")
-                    st.write(str(e))
-                    st.stop()
+            route_data = response.json()
 
-                if response.status_code != 200:
-                    st.error(f"OSRM Error {response.status_code}")
-                    st.write(response.text)
-                    st.stop()
+            if "routes" not in route_data or len(route_data["routes"]) == 0:
+                st.error("No route found.")
+                st.stop()
 
-                route_data = response.json()
+            route = route_data["routes"][0]
 
-                if "routes" not in route_data:
-                    st.error("No routes returned.")
-                    st.stop()
+            route_coords = route["geometry"]["coordinates"]
 
-                route = route_data["routes"][0]
+            route_df = pd.DataFrame(
+                route_coords,
+                columns=["longitude", "latitude"]
+            )
 
-                route_coords = route["geometry"]["coordinates"]
+            distance_km = route["distance"] / 1000
+            duration_hours = route["duration"] / 3600
 
-                route_df = pd.DataFrame(
-                    route_coords,
-                    columns=["longitude", "latitude"]
-                )
+            st.success(
+                f"Route generated from {start_label} to {destination_label}"
+            )
 
-                distance_km = route["distance"] / 1000
+            metric_col1, metric_col2 = st.columns(2)
 
-                duration_hours = route["duration"] / 3600
+            metric_col1.metric(
+                "Route Distance",
+                f"{round(distance_km, 1)} km"
+            )
 
-                st.success(
-                    f"Route generated from {start_city} to {destination_city}"
-                )
+            metric_col2.metric(
+                "Estimated Drive Time",
+                f"{round(duration_hours, 1)} hrs"
+            )
 
-                metric_col1, metric_col2 = st.columns(2)
+            route_map_df = ocm_df.copy()
 
-                metric_col1.metric(
-                    "Route Distance",
-                    f"{round(distance_km, 1)} km"
-                )
+            route_map_df["latitude"] = pd.to_numeric(
+                route_map_df["latitude"],
+                errors="coerce"
+            )
 
-                metric_col2.metric(
-                    "Estimated Drive Time",
-                    f"{round(duration_hours, 1)} hrs"
-                )
+            route_map_df["longitude"] = pd.to_numeric(
+                route_map_df["longitude"],
+                errors="coerce"
+            )
 
-                route_map_df = ocm_df.copy()
+            route_map_df["max_power_kw"] = pd.to_numeric(
+                route_map_df["max_power_kw"],
+                errors="coerce"
+            )
 
-                route_map_df["latitude"] = pd.to_numeric(
-                    route_map_df["latitude"],
-                    errors="coerce"
-                )
+            route_map_df = route_map_df.dropna(
+                subset=["latitude", "longitude"]
+            )
 
-                route_map_df["longitude"] = pd.to_numeric(
-                    route_map_df["longitude"],
-                    errors="coerce"
-                )
+            route_map_df["route_score"] = (
+                route_map_df["max_power_kw"].fillna(0) * 0.6
+                + route_map_df["reliability_score"].fillna(0) * 0.4
+            )
 
-                route_map_df["max_power_kw"] = pd.to_numeric(
-                    route_map_df["max_power_kw"],
-                    errors="coerce"
-                )
+            sampled_route = route_df.iloc[
+                ::max(1, len(route_df) // 100)
+            ].copy()
 
-                route_map_df = route_map_df.dropna(
-                    subset=["latitude", "longitude"]
-                )
+            def nearest_route_distance(row):
 
-                route_map_df["route_score"] = (
-                    route_map_df["max_power_kw"].fillna(0) * 0.6
-                    +
-                    route_map_df["reliability_score"].fillna(0) * 0.4
-                )
-
-                sampled_route = route_df.iloc[
-                    ::max(1, len(route_df) // 100)
-                ].copy()
-
-                def nearest_route_distance(row):
-
-                    distances = sampled_route.apply(
-                        lambda point: haversine_distance(
-                            row["latitude"],
-                            row["longitude"],
-                            point["latitude"],
-                            point["longitude"]
-                        ),
-                        axis=1
-                    )
-
-                    return distances.min()
-
-                route_map_df["distance_to_route_km"] = route_map_df.apply(
-                    nearest_route_distance,
+                distances = sampled_route.apply(
+                    lambda point: haversine_distance(
+                        row["latitude"],
+                        row["longitude"],
+                        point["latitude"],
+                        point["longitude"]
+                    ),
                     axis=1
                 )
 
-                near_route_df = route_map_df[
-                    route_map_df["distance_to_route_km"] <= route_buffer_km
-                ].copy()
+                return distances.min()
 
-                recommended_stops = (
-                    near_route_df
-                    .sort_values("route_score", ascending=False)
-                    .head(30)
+            route_map_df["distance_to_route_km"] = route_map_df.apply(
+                nearest_route_distance,
+                axis=1
+            )
+
+            near_route_df = route_map_df[
+                route_map_df["distance_to_route_km"] <= route_buffer_km
+            ].copy()
+
+            recommended_stops = (
+                near_route_df
+                .sort_values("route_score", ascending=False)
+                .head(30)
+            )
+
+            st.info(
+                f"Found {len(near_route_df)} chargers within "
+                f"{route_buffer_km} km of the route."
+            )
+
+            st.subheader("Recommended Charging Stops Near Route")
+
+            if len(recommended_stops) == 0:
+                st.warning("No chargers found within the selected route buffer.")
+                st.stop()
+
+            st.dataframe(
+                recommended_stops[
+                    [
+                        "station_name",
+                        "town",
+                        "state_clean",
+                        "max_power_kw",
+                        "reliability_score",
+                        "route_score",
+                        "distance_to_route_km"
+                    ]
+                ],
+                use_container_width=True
+            )
+
+            st.subheader("Suggested Charging Stop Sequence")
+
+            stop_interval_km = ev_range_km - safety_buffer_km
+
+            if stop_interval_km <= 0:
+                st.warning("Safety buffer must be smaller than EV driving range.")
+                st.stop()
+
+            num_stops_needed = max(
+                1,
+                int(distance_km // stop_interval_km)
+            )
+
+            route_stop_targets = [
+                (i + 1) * stop_interval_km
+                for i in range(num_stops_needed)
+                if (i + 1) * stop_interval_km < distance_km
+            ]
+
+            sequence_stops = []
+            used_station_names = set()
+
+            for target_distance in route_stop_targets:
+
+                target_ratio = target_distance / distance_km
+
+                target_index = int(
+                    target_ratio * len(route_df)
                 )
 
-                st.info(
-                    f"Found {len(near_route_df)} chargers within "
-                    f"{route_buffer_km} km of the route."
+                target_index = min(
+                    max(target_index, 0),
+                    len(route_df) - 1
                 )
 
-                st.subheader("Recommended Charging Stops Near Route")
+                target_point = route_df.iloc[target_index]
 
-                st.dataframe(
-                    recommended_stops[
-                        [
-                            "station_name",
-                            "town",
-                            "state_clean",
-                            "max_power_kw",
-                            "reliability_score",
-                            "route_score",
-                            "distance_to_route_km"
-                        ]
-                    ],
-                    use_container_width=True
+                candidate_stops = recommended_stops.copy()
+
+                candidate_stops["distance_to_target_km"] = (
+                    candidate_stops.apply(
+                        lambda row: haversine_distance(
+                            row["latitude"],
+                            row["longitude"],
+                            target_point["latitude"],
+                            target_point["longitude"]
+                        ),
+                        axis=1
+                    )
                 )
 
-                st.subheader("Suggested Charging Stop Sequence")
-
-                stop_interval_km = (
-                    ev_range_km - safety_buffer_km
-                )
-
-                num_stops_needed = max(
-                    1,
-                    int(distance_km // stop_interval_km)
-                )
-
-                route_stop_targets = [
-                    (i + 1) * stop_interval_km
-                    for i in range(num_stops_needed)
-                    if (i + 1) * stop_interval_km < distance_km
+                candidate_stops = candidate_stops[
+                    ~candidate_stops["station_name"].isin(used_station_names)
                 ]
 
-                sequence_stops = []
+                if len(candidate_stops) == 0:
+                    break
 
-                for target_distance in route_stop_targets:
-
-                    target_ratio = (
-                        target_distance / distance_km
+                best_stop = (
+                    candidate_stops
+                    .sort_values(
+                        [
+                            "distance_to_target_km",
+                            "route_score"
+                        ],
+                        ascending=[True, False]
                     )
-
-                    target_index = int(
-                        target_ratio * len(route_df)
-                    )
-
-                    target_index = min(
-                        max(target_index, 0),
-                        len(route_df) - 1
-                    )
-
-                    target_point = route_df.iloc[target_index]
-
-                    candidate_stops = recommended_stops.copy()
-
-                    candidate_stops["distance_to_target_km"] = (
-                        candidate_stops.apply(
-                            lambda row: haversine_distance(
-                                row["latitude"],
-                                row["longitude"],
-                                target_point["latitude"],
-                                target_point["longitude"]
-                            ),
-                            axis=1
-                        )
-                    )
-
-                    best_stop = (
-                        candidate_stops
-                        .sort_values(
-                            [
-                                "distance_to_target_km",
-                                "route_score"
-                            ],
-                            ascending=[True, False]
-                        )
-                        .iloc[0]
-                    )
-
-                    sequence_stops.append({
-                        "stop_number":
-                            len(sequence_stops) + 1,
-
-                        "target_distance_km":
-                            round(target_distance, 1),
-
-                        "station_name":
-                            best_stop["station_name"],
-
-                        "town":
-                            best_stop["town"],
-
-                        "state_clean":
-                            best_stop["state_clean"],
-
-                        "max_power_kw":
-                            best_stop["max_power_kw"],
-
-                        "reliability_score":
-                            best_stop["reliability_score"],
-
-                        "route_score":
-                            best_stop["route_score"],
-
-                        "distance_to_target_km":
-                            round(
-                                best_stop[
-                                    "distance_to_target_km"
-                                ],
-                                1
-                            )
-                    })
-
-                if len(sequence_stops) == 0:
-
-                    st.success(
-                        "No charging stop required based on selected EV range."
-                    )
-
-                else:
-
-                    sequence_df = pd.DataFrame(sequence_stops)
-
-                    st.dataframe(
-                        sequence_df,
-                        use_container_width=True
-                    )
-
-                st.subheader(
-                    "Route Map with Recommended Chargers"
+                    .iloc[0]
                 )
 
-                recommended_stops["plot_size"] = (
-                    recommended_stops["max_power_kw"]
-                    .fillna(1)
-                    .clip(lower=5, upper=350)
+                used_station_names.add(best_stop["station_name"])
+
+                sequence_stops.append({
+                    "stop_number": len(sequence_stops) + 1,
+                    "target_distance_km": round(target_distance, 1),
+                    "station_name": best_stop["station_name"],
+                    "town": best_stop["town"],
+                    "state_clean": best_stop["state_clean"],
+                    "max_power_kw": best_stop["max_power_kw"],
+                    "reliability_score": best_stop["reliability_score"],
+                    "route_score": best_stop["route_score"],
+                    "distance_to_target_km": round(
+                        best_stop["distance_to_target_km"],
+                        1
+                    )
+                })
+
+            if len(sequence_stops) == 0:
+
+                st.success(
+                    "No charging stop required based on selected EV range."
                 )
 
-                fig = px.scatter_mapbox(
-                    recommended_stops,
-                    lat="latitude",
-                    lon="longitude",
-                    hover_name="station_name",
-                    hover_data={
-                        "town": True,
-                        "state_clean": True,
-                        "max_power_kw": True,
-                        "reliability_score": True,
-                        "route_score": True,
-                        "distance_to_route_km": True,
-                        "latitude": False,
-                        "longitude": False,
-                        "plot_size": False
-                    },
-                    color="route_score",
-                    size="plot_size",
-                    zoom=4,
-                    height=700
-                )
+            else:
 
-                fig.add_scattermapbox(
-                    lat=route_df["latitude"],
-                    lon=route_df["longitude"],
-                    mode="lines",
-                    line=dict(width=4),
-                    name="Driving Route"
-                )
+                sequence_df = pd.DataFrame(sequence_stops)
 
-                fig.update_layout(
-                    mapbox_style="open-street-map",
-                    margin={
-                        "r": 0,
-                        "t": 0,
-                        "l": 0,
-                        "b": 0
-                    }
-                )
-
-                st.plotly_chart(
-                    fig,
+                st.dataframe(
+                    sequence_df,
                     use_container_width=True
                 )
+
+            st.subheader("Route Map with Recommended Chargers")
+
+            recommended_stops["plot_size"] = (
+                recommended_stops["max_power_kw"]
+                .fillna(1)
+                .clip(lower=5, upper=350)
+            )
+
+            fig = px.scatter_mapbox(
+                recommended_stops,
+                lat="latitude",
+                lon="longitude",
+                hover_name="station_name",
+                hover_data={
+                    "town": True,
+                    "state_clean": True,
+                    "max_power_kw": True,
+                    "reliability_score": True,
+                    "route_score": True,
+                    "distance_to_route_km": True,
+                    "latitude": False,
+                    "longitude": False,
+                    "plot_size": False
+                },
+                color="route_score",
+                size="plot_size",
+                zoom=4,
+                height=700
+            )
+
+            fig.add_scattermapbox(
+                lat=route_df["latitude"],
+                lon=route_df["longitude"],
+                mode="lines",
+                line=dict(width=4),
+                name="Driving Route"
+            )
+
+            fig.update_layout(
+                mapbox_style="open-street-map",
+                margin={
+                    "r": 0,
+                    "t": 0,
+                    "l": 0,
+                    "b": 0
+                }
+            )
+
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
 # -----------------------------
 # PROJECT INSIGHTS
 # -----------------------------
