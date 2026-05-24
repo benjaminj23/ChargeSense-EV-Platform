@@ -1365,6 +1365,94 @@ elif page == "Infrastructure Investment Simulator":
         f"would increase charger density from **{round(current_row['chargers_per_million'], 1)}** "
         f"to **{round(updated_chargers_per_million, 1)} chargers per million people**."
     )
+
+elif page == "Availability Stress Test":
+
+    st.title("🧪 Availability Stress Test")
+
+    st.markdown("""
+    Simulate how charger availability disruptions could affect EV charging capacity.
+    This helps estimate how resilient each state's charging network is if some chargers are offline.
+    """)
+
+    stress_df = ocm_df.copy()
+
+    stress_df["total_connector_quantity"] = pd.to_numeric(
+        stress_df["total_connector_quantity"],
+        errors="coerce"
+    ).fillna(1)
+
+    selected_stress_state = st.selectbox(
+        "Select State",
+        sorted(stress_df["state_clean"].dropna().unique()),
+        key="stress_state"
+    )
+
+    outage_rate = st.slider(
+        "Simulated Charger Outage Rate (%)",
+        0,
+        80,
+        20
+    )
+
+    state_stress_df = stress_df[
+        stress_df["state_clean"] == selected_stress_state
+    ].copy()
+
+    current_connectors = state_stress_df["total_connector_quantity"].sum()
+
+    available_connectors = current_connectors * (1 - outage_rate / 100)
+
+    lost_connectors = current_connectors - available_connectors
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "Current Connectors",
+        int(current_connectors)
+    )
+
+    col2.metric(
+        "Available After Outage",
+        int(available_connectors)
+    )
+
+    col3.metric(
+        "Connectors Lost",
+        int(lost_connectors)
+    )
+
+    if outage_rate >= 50:
+        st.error("Severe disruption: charging capacity is heavily reduced.")
+    elif outage_rate >= 25:
+        st.warning("Moderate disruption: queues may increase significantly.")
+    else:
+        st.success("Low disruption: network capacity remains relatively stable.")
+
+    st.subheader("Station-Level Availability Simulation")
+
+    state_stress_df["simulated_available_connectors"] = (
+        state_stress_df["total_connector_quantity"]
+        * (1 - outage_rate / 100)
+    ).round(1)
+
+    st.dataframe(
+        state_stress_df[
+            [
+                "station_name",
+                "town",
+                "state_clean",
+                "total_connector_quantity",
+                "simulated_available_connectors",
+                "reliability_score"
+            ]
+        ]
+        .sort_values("simulated_available_connectors")
+        .head(25),
+        use_container_width=True
+    )
+
+
 # -----------------------------------
 # PROJECT INSIGHTS
 # -----------------------------------
