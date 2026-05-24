@@ -5,10 +5,18 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+# -----------------------------------
+# PAGE CONFIG
+# -----------------------------------
+
 st.set_page_config(
     page_title="ChargeSense",
     layout="wide"
 )
+
+# -----------------------------------
+# LOAD DATA
+# -----------------------------------
 
 @st.cache_data
 def load_data():
@@ -18,7 +26,14 @@ def load_data():
 
 nsw_df, ocm_df = load_data()
 
-ocm_df["max_power_kw"] = pd.to_numeric(ocm_df["max_power_kw"], errors="coerce")
+# -----------------------------------
+# DATA PREP
+# -----------------------------------
+
+ocm_df["max_power_kw"] = pd.to_numeric(
+    ocm_df["max_power_kw"],
+    errors="coerce"
+)
 
 ocm_df["date_last_verified"] = pd.to_datetime(
     ocm_df["date_last_verified"],
@@ -67,6 +82,10 @@ def reliability_label(score):
 
 ocm_df["reliability_label"] = ocm_df["reliability_score"].apply(reliability_label)
 
+# -----------------------------------
+# SIDEBAR
+# -----------------------------------
+
 st.sidebar.title("⚡ ChargeSense")
 
 page = st.sidebar.radio(
@@ -76,11 +95,15 @@ page = st.sidebar.radio(
         "Infrastructure Overview",
         "Interactive Map",
         "Reliability Intelligence",
-        "Reservation Simulation",
         "Charger Recommendation",
+        "Reservation Simulation",
         "Project Insights"
     ]
 )
+
+# -----------------------------------
+# HOME
+# -----------------------------------
 
 if page == "Home":
 
@@ -88,15 +111,38 @@ if page == "Home":
     st.subheader("EV Infrastructure Intelligence Platform")
 
     st.markdown("""
-    Explore EV charging infrastructure, congestion risk, reliability intelligence,
-    and reservation simulation using public EV charging data.
+    ChargeSense is an EV Infrastructure Intelligence Platform designed to analyze
+    charging reliability, infrastructure quality, congestion risk, and charging accessibility
+    across Australia.
+
+    Features include:
+    - Interactive infrastructure mapping
+    - Reliability intelligence scoring
+    - Charger recommendation engine
+    - Reservation simulation
+    - National EV infrastructure analytics
     """)
 
     st.success("Platform loaded successfully")
 
+    st.divider()
+
+    st.caption(
+        "Built using Python, Streamlit, OpenChargeMap API data, and NSW EV infrastructure data."
+    )
+
+    st.link_button(
+        "View GitHub Repository",
+        "YOUR_GITHUB_LINK"
+    )
+
+# -----------------------------------
+# INFRASTRUCTURE OVERVIEW
+# -----------------------------------
+
 elif page == "Infrastructure Overview":
 
-    st.title("Infrastructure Overview")
+    st.title("📊 Infrastructure Overview")
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -129,9 +175,13 @@ elif page == "Infrastructure Overview":
     st.subheader("EV Charging Stations by State")
     st.bar_chart(state_summary.set_index("state_clean"))
 
+# -----------------------------------
+# INTERACTIVE MAP
+# -----------------------------------
+
 elif page == "Interactive Map":
 
-    st.title("Interactive Charger Map")
+    st.title("🗺️ Interactive Charger Map")
 
     st.markdown(
         "Explore EV charging stations across Australia using OpenChargeMap data."
@@ -160,8 +210,16 @@ elif page == "Interactive Map":
         & (ocm_df["max_power_kw"].fillna(0) >= min_power)
     ].copy()
 
-    map_df["latitude"] = pd.to_numeric(map_df["latitude"], errors="coerce")
-    map_df["longitude"] = pd.to_numeric(map_df["longitude"], errors="coerce")
+    map_df["latitude"] = pd.to_numeric(
+        map_df["latitude"],
+        errors="coerce"
+    )
+
+    map_df["longitude"] = pd.to_numeric(
+        map_df["longitude"],
+        errors="coerce"
+    )
+
     map_df = map_df.dropna(subset=["latitude", "longitude"])
 
     map_df["plot_size"] = (
@@ -203,9 +261,13 @@ elif page == "Interactive Map":
 
         st.plotly_chart(fig, use_container_width=True)
 
+# -----------------------------------
+# RELIABILITY INTELLIGENCE
+# -----------------------------------
+
 elif page == "Reliability Intelligence":
 
-    st.title("Reliability Intelligence")
+    st.title("🛡️ Reliability Intelligence")
 
     st.markdown("""
     Reliability score is based on recent verification, data quality level,
@@ -247,58 +309,13 @@ elif page == "Reliability Intelligence":
         reliability_dist.set_index("Reliability Label")
     )
 
-elif page == "Reservation Simulation":
+# -----------------------------------
+# CHARGER RECOMMENDATION
+# -----------------------------------
 
-    st.title("Reservation Simulation")
-
-    st.markdown("""
-    Simulate a short reservation window for high-priority EV charging stations.
-    This is a prototype of the booking/access-code concept.
-    """)
-
-    top_sites = (
-        nsw_df[
-            [
-                "Station_name",
-                "Operator",
-                "reservation_need_index"
-            ]
-        ]
-        .dropna(subset=["Station_name"])
-        .sort_values("reservation_need_index", ascending=False)
-    )
-
-    selected_station = st.selectbox(
-        "Select Charging Station",
-        top_sites["Station_name"].unique()
-    )
-
-    reservation_minutes = st.slider(
-        "Reservation Duration (minutes)",
-        15,
-        60,
-        20
-    )
-
-    def generate_access_code():
-        return str(random.randint(1000, 9999))
-
-    if st.button("Simulate Reservation"):
-
-        booking_time = datetime.now()
-        expiry_time = booking_time + timedelta(minutes=reservation_minutes)
-        access_code = generate_access_code()
-
-        st.success(f"Reservation confirmed for {selected_station}")
-        st.info(f"Access window: {reservation_minutes} minutes")
-
-        st.write("Booking time:", booking_time.strftime("%Y-%m-%d %H:%M:%S"))
-        st.write("Expiry time:", expiry_time.strftime("%Y-%m-%d %H:%M:%S"))
-
-        st.code(f"ACCESS CODE: {access_code}")
 elif page == "Charger Recommendation":
 
-    st.title("Charger Recommendation Engine")
+    st.title("🎯 Charger Recommendation Engine")
 
     st.markdown("""
     Find recommended charging stations based on charger power and reliability score.
@@ -345,24 +362,91 @@ elif page == "Charger Recommendation":
         ascending=False
     )
 
+    st.metric(
+        "Recommended Stations Found",
+        len(rec_df)
+    )
+
     st.subheader("Recommended Charging Stations")
 
-    st.dataframe(
-        rec_df[
+    if len(rec_df) == 0:
+        st.warning("No stations match the selected recommendation filters.")
+    else:
+        st.dataframe(
+            rec_df[
+                [
+                    "station_name",
+                    "state_clean",
+                    "max_power_kw",
+                    "reliability_score",
+                    "reliability_label",
+                    "recommendation_score"
+                ]
+            ].head(15),
+            use_container_width=True
+        )
+
+# -----------------------------------
+# RESERVATION SIMULATION
+# -----------------------------------
+
+elif page == "Reservation Simulation":
+
+    st.title("🔐 Reservation Simulation")
+
+    st.markdown("""
+    Simulate a short reservation window for high-priority EV charging stations.
+    This is a prototype of the booking/access-code concept.
+    """)
+
+    top_sites = (
+        nsw_df[
             [
-                "station_name",
-                "state_clean",
-                "max_power_kw",
-                "reliability_score",
-                "reliability_label",
-                "recommendation_score"
+                "Station_name",
+                "Operator",
+                "reservation_need_index"
             ]
-        ].head(15),
-        use_container_width=True
+        ]
+        .dropna(subset=["Station_name"])
+        .sort_values("reservation_need_index", ascending=False)
     )
+
+    selected_station = st.selectbox(
+        "Select Charging Station",
+        top_sites["Station_name"].unique()
+    )
+
+    reservation_minutes = st.slider(
+        "Reservation Duration (minutes)",
+        15,
+        60,
+        20
+    )
+
+    def generate_access_code():
+        return str(random.randint(1000, 9999))
+
+    if st.button("Simulate Reservation"):
+
+        booking_time = datetime.now()
+        expiry_time = booking_time + timedelta(minutes=reservation_minutes)
+        access_code = generate_access_code()
+
+        st.success(f"Reservation confirmed for {selected_station}")
+        st.info(f"Access window: {reservation_minutes} minutes")
+
+        st.write("Booking time:", booking_time.strftime("%Y-%m-%d %H:%M:%S"))
+        st.write("Expiry time:", expiry_time.strftime("%Y-%m-%d %H:%M:%S"))
+
+        st.code(f"ACCESS CODE: {access_code}")
+
+# -----------------------------------
+# PROJECT INSIGHTS
+# -----------------------------------
+
 elif page == "Project Insights":
 
-    st.title("Project Insights")
+    st.title("💡 Project Insights")
 
     st.markdown("""
     ### Key Takeaways
