@@ -27,8 +27,6 @@ def load_data():
 
 nsw_df, ocm_df, ml_df = load_data()
 
-nsw_df, ocm_df = load_data()
-
 # -----------------------------------
 # DATA PREP
 # -----------------------------------
