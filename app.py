@@ -12,7 +12,10 @@ st.set_page_config(page_title="ChargeSense", layout="wide")
 def load_data():
     nsw_df = pd.read_csv("ev_chargers_nsw_enriched.csv")
     ocm_df = pd.read_csv("openchargemap_au_enriched.csv")
-    return nsw_df, ocm_df
+    ev_market_df = pd.read_csv("australia_ev_market_data.csv")
+    return nsw_df, ocm_df, ev_market_df
+
+nsw_df, ocm_df, ev_market_df = load_data()
 
 
 nsw_df, ocm_df = load_data()
@@ -109,7 +112,11 @@ state_metrics["infrastructure_gap_score"] = (
 state_metrics["infrastructure_gap_score"] = (
     state_metrics["infrastructure_gap_score"].clip(lower=0, upper=100).round(2)
 )
-
+state_metrics = state_metrics.merge(
+    ev_market_df,
+    on="state_clean",
+    how="left"
+)
 # -----------------------------
 # SIDEBAR
 # -----------------------------
