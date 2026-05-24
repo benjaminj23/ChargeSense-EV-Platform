@@ -1739,6 +1739,28 @@ elif page == "Real Route Optimizer":
         "Geelong": [144.3617, -38.1499]
     }
 
+    def haversine_distance(lat1, lon1, lat2, lon2):
+        import math
+
+        radius_km = 6371
+
+        lat1 = math.radians(lat1)
+        lon1 = math.radians(lon1)
+        lat2 = math.radians(lat2)
+        lon2 = math.radians(lon2)
+
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+
+        a = (
+            math.sin(dlat / 2) ** 2
+            + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        )
+
+        c = 2 * math.asin(math.sqrt(a))
+
+        return radius_km * c
+
     cities = sorted(city_coordinates.keys())
 
     col1, col2 = st.columns(2)
@@ -1759,6 +1781,13 @@ elif page == "Real Route Optimizer":
 
     start_coords = city_coordinates[start_city]
     end_coords = city_coordinates[destination_city]
+
+    route_buffer_km = st.slider(
+        "Maximum Distance from Route (km)",
+        10,
+        150,
+        50
+    )
 
     if start_city == destination_city:
         st.warning("Start city and destination city cannot be the same.")
@@ -1854,29 +1883,47 @@ elif page == "Real Route Optimizer":
                     + route_map_df["reliability_score"].fillna(0) * 0.4
                 )
 
-                sampled_route = route_df.iloc[::max(1, len(route_df) // 100)].copy()
-                def nearest_route_distance(row):
-                   distances = sampled_route.apply(
-                   lambda point: haversine_distance(
-                   row["latitude"],
-                   row["longitude"],
-                   point["latitude"],
-                   point["longitude"]
-                    ),
-                   axis=1
-                  )
-                 return distances.min()
-
-                route_map_df["distance_to_route_km"] = route_map_df.apply(
-                nearest_route_distance,
-                axis=1
-               )
-
-                near_route_df = route_map_df[
-                route_map_df["distance_to_route_km"] <= 50
+                sampled_route = route_df.iloc[
+                    ::max(1, len(route_df) // 100)
                 ].copy()
 
-                st.subheader("Recommended Charging Stops")
+                def nearest_route_distance(row):
+                    distances = sampled_route.apply(
+                        lambda point: haversine_distance(
+                            row["latitude"],
+                            row["longitude"],
+                            point["latitude"],
+                            point["longitude"]
+                        ),
+                        axis=1
+                    )
+
+                    return distances.min()
+
+                route_map_df["distance_to_route_km"] = route_map_df.apply(
+                    nearest_route_distance,
+                    axis=1
+                )
+
+                near_route_df = route_map_df[
+                    route_map_df["distance_to_route_km"] <= route_buffer_km
+                ].copy()
+
+                recommended_stops = (
+                    near_route_df
+                    .sort_values("route_score", ascending=False)
+                    .head(30)
+                )
+
+                st.info(
+                    f"Found {len(near_route_df)} chargers within {route_buffer_km} km of the route."
+                )
+
+                st.subheader("Recommended Charging Stops Near Route")
+
+                if len(recommended_stops) == 0:
+                    st.warning("No chargers found within the selected route buffer.")
+                    st.stop()
 
                 st.dataframe(
                     recommended_stops[
@@ -1912,6 +1959,7 @@ elif page == "Real Route Optimizer":
                         "max_power_kw": True,
                         "reliability_score": True,
                         "route_score": True,
+                        "distance_to_route_km": True,
                         "latitude": False,
                         "longitude": False,
                         "plot_size": False
