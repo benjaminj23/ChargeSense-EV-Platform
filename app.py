@@ -1735,7 +1735,7 @@ elif page == "Real Route Optimizer":
         with st.spinner("Calculating route..."):
 
             url = (
-                "https://api.openrouteservice.org/v2/directions/driving-car"
+                "https://api.openrouteservice.org/v2/directions/driving-car/geojson"
             )
 
             headers = {
@@ -1757,7 +1757,8 @@ elif page == "Real Route Optimizer":
             )
 
             if response.status_code != 200:
-                st.error("Failed to retrieve route from OpenRouteService.")
+                st.error(f"ORS Error {response.status_code}")
+                st.write(response.text)
                 st.stop()
 
             route_data = response.json()
