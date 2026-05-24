@@ -1830,23 +1830,23 @@ elif page == "Real Route Optimizer":
 
             else:
 
-            sequence_df = pd.DataFrame(sequence_stops)
+             sequence_df = pd.DataFrame(sequence_stops)
 
-            total_charging_time_min = (sequence_df["estimated_charge_time_min"].sum())
+             total_charging_time_min = (sequence_df["estimated_charge_time_min"].sum())
 
-            total_trip_time_hours = ( duration_hours + (total_charging_time_min / 60))
+             total_trip_time_hours = ( duration_hours + (total_charging_time_min / 60))
 
-            summary_col1, summary_col2, summary_col3 = st.columns(3)
+             summary_col1, summary_col2, summary_col3 = st.columns(3)
 
-            summary_col1.metric(  "Charging Stops",    len(sequence_df) )
+             summary_col1.metric(  "Charging Stops",    len(sequence_df) )
 
-            summary_col2.metric(  "Total Charging Time",  f"{round(total_charging_time_min, 1)} min")
+             summary_col2.metric(  "Total Charging Time",  f"{round(total_charging_time_min, 1)} min")
 
-            summary_col3.metric("Total Trip Time", f"{round(total_trip_time_hours, 1)} hrs")
+             summary_col3.metric("Total Trip Time", f"{round(total_trip_time_hours, 1)} hrs")
 
-            st.dataframe(sequence_df, use_container_width=True)
+             st.dataframe(sequence_df, use_container_width=True)
 
-            st.subheader("Route Map with Recommended Chargers")
+             st.subheader("Route Map with Recommended Chargers")
 
             recommended_stops["plot_size"] = (
                 recommended_stops["max_power_kw"]
