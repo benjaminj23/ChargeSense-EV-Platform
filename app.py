@@ -534,93 +534,73 @@ elif page == "Congestion Risk Analysis":
         congestion_dist.set_index("Congestion Risk")
     )
 
-# -----------------------------------
-# OPERATOR FRAGMENTATION
-# -----------------------------------
+elif page == "Charging Type Mix":
 
-elif page == "Operator Fragmentation":
-
-    st.title("🧩 Operator Fragmentation Analysis")
+    st.title("🔌 Charging Type Mix")
 
     st.markdown("""
-    Analyze how fragmented the EV charging network is across states.
-    Higher fragmentation means drivers may need to rely on multiple charging networks or apps.
+    Analyze the mix of charger speed categories across Australian states.
+    This helps identify whether regions are relying mainly on slower AC infrastructure
+    or building stronger fast and ultra-fast charging capacity.
     """)
 
-    if "operator" not in ocm_df.columns:
-        st.warning("Operator data is not available in the current OpenChargeMap dataset.")
-    else:
-        operator_df = ocm_df.copy()
+    selected_state_mix = st.selectbox(
+        "Select State",
+        sorted(ocm_df["state_clean"].dropna().unique()),
+        key="mix_state"
+    )
 
-        operator_df["operator"] = (
-            operator_df["operator"]
-            .fillna("Unknown Operator")
-            .astype(str)
-            .str.strip()
-        )
+    mix_df = ocm_df[
+        ocm_df["state_clean"] == selected_state_mix
+    ]
 
-        selected_state_operator = st.selectbox(
-            "Select State",
-            sorted(operator_df["state_clean"].dropna().unique()),
-            key="operator_state"
-        )
+    speed_mix = (
+        mix_df["speed_category"]
+        .fillna("Unknown")
+        .value_counts()
+        .reset_index()
+    )
 
-        state_operator_df = operator_df[
-            operator_df["state_clean"] == selected_state_operator
-        ]
+    speed_mix.columns = ["Speed Category", "Count"]
 
-        operator_summary = (
-            state_operator_df
-            .groupby("operator")
-            .agg(
-                total_stations=("station_name", "count"),
-                avg_power_kw=("max_power_kw", "mean"),
-                avg_reliability=("reliability_score", "mean")
-            )
-            .reset_index()
-            .sort_values("total_stations", ascending=False)
-        )
+    col1, col2, col3 = st.columns(3)
 
-        col1, col2, col3 = st.columns(3)
+    col1.metric(
+        "Total Stations",
+        len(mix_df)
+    )
 
-        col1.metric(
-            "Operators in State",
-            operator_summary["operator"].nunique()
-        )
+    col2.metric(
+        "Ultra-fast Sites",
+        len(mix_df[mix_df["speed_category"] == "Ultra-fast DC"])
+    )
 
-        top_operator_share = 0
+    col3.metric(
+        "Average Power (kW)",
+        round(mix_df["max_power_kw"].mean(), 1)
+    )
 
-        if operator_summary["total_stations"].sum() > 0:
-            top_operator_share = (
-                operator_summary["total_stations"].max()
-                / operator_summary["total_stations"].sum()
-            ) * 100
+    st.subheader("Charging Speed Category Mix")
 
-        col2.metric(
-            "Top Operator Share",
-            f"{round(top_operator_share, 1)}%"
-        )
+    st.bar_chart(
+        speed_mix.set_index("Speed Category")
+    )
 
-        col3.metric(
-            "Total Stations",
-            len(state_operator_df)
-        )
+    st.subheader("Station Details")
 
-        st.subheader("Top Operators by Station Count")
-
-        st.dataframe(
-            operator_summary.head(15),
-            use_container_width=True
-        )
-
-        st.subheader("Operator Station Share")
-
-        st.bar_chart(
-            operator_summary
-            .head(10)
-            .set_index("operator")["total_stations"]
-        )
-
+    st.dataframe(
+        mix_df[
+            [
+                "station_name",
+                "town",
+                "state_clean",
+                "max_power_kw",
+                "speed_category",
+                "reliability_score"
+            ]
+        ].head(30),
+        use_container_width=True
+    )
 # -----------------------------------
 # PROJECT INSIGHTS
 # -----------------------------------
