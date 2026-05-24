@@ -1326,7 +1326,6 @@ elif page == "Real Route Optimizer":
                 headers=headers,
                 timeout=20
             )
-
         except requests.exceptions.RequestException as e:
             st.error("Could not connect to geocoding service.")
             st.write(str(e))
@@ -1352,10 +1351,7 @@ elif page == "Real Route Optimizer":
 
     route_input_mode = st.radio(
         "Route Input Mode",
-        [
-            "Major City",
-            "Custom Place"
-        ],
+        ["Major City", "Custom Place"],
         horizontal=True
     )
 
@@ -1381,7 +1377,6 @@ elif page == "Real Route Optimizer":
 
         start_label = start_city
         destination_label = destination_city
-
         start_coords = city_coordinates[start_city]
         end_coords = city_coordinates[destination_city]
 
@@ -1403,7 +1398,6 @@ elif page == "Real Route Optimizer":
 
         start_label = start_place
         destination_label = destination_place
-
         start_coords = None
         end_coords = None
 
@@ -1420,20 +1414,18 @@ elif page == "Real Route Optimizer":
     st.info(
         f"{selected_ev}: {battery_kwh} kWh battery, approx. {ev_range_km} km driving range."
     )
-    charging_strategy = st.selectbox(
-    "Charging Strategy",
-    [
-        "Conservative",
-        "Fastest Trip",
-        "Fewest Stops"
-    ]) 
-    if charging_strategy == "Conservative":
-     dynamic_charge_to_percent = 80
-    elif charging_strategy == "Fastest Trip":
-     dynamic_charge_to_percent = 60
-    else:
-     dynamic_charge_to_percent = 90
 
+    charging_strategy = st.selectbox(
+        "Charging Strategy",
+        ["Conservative", "Fastest Trip", "Fewest Stops"]
+    )
+
+    if charging_strategy == "Conservative":
+        dynamic_charge_to_percent = 80
+    elif charging_strategy == "Fastest Trip":
+        dynamic_charge_to_percent = 60
+    else:
+        dynamic_charge_to_percent = 90
 
     col1, col2 = st.columns(2)
 
@@ -1473,9 +1465,9 @@ elif page == "Real Route Optimizer":
 
     with col3:
         st.metric(
-        "Target Battery Strategy",
-        f"{dynamic_charge_to_percent}%"
-       )
+            "Target Battery Strategy",
+            f"{dynamic_charge_to_percent}%"
+        )
 
     if st.button("Generate Real Route"):
 
@@ -1496,7 +1488,6 @@ elif page == "Real Route Optimizer":
                 st.stop()
 
             with st.spinner("Finding locations..."):
-
                 start_geo = geocode_place(start_place)
                 destination_geo = geocode_place(destination_place)
 
@@ -1543,7 +1534,6 @@ elif page == "Real Route Optimizer":
                     params=params,
                     timeout=30
                 )
-
             except requests.exceptions.RequestException as e:
                 st.error("Could not connect to OSRM routing service.")
                 st.write(str(e))
@@ -1624,7 +1614,6 @@ elif page == "Real Route Optimizer":
             ].copy()
 
             def nearest_route_distance(row):
-
                 distances = sampled_route.apply(
                     lambda point: haversine_distance(
                         row["latitude"],
@@ -1686,20 +1675,32 @@ elif page == "Real Route Optimizer":
 
             st.subheader("Suggested Charging Stop Sequence")
 
-            usable_start_range_km = ev_range_km * (starting_battery_percent / 100)
+            usable_start_range_km = ev_range_km * (
+                starting_battery_percent / 100
+            )
 
-            usable_after_charge_range_km = ev_range_km * ((dynamic_charge_to_percent - charge_from_percent) / 100)
+            usable_after_charge_range_km = ev_range_km * (
+                (dynamic_charge_to_percent - charge_from_percent) / 100
+            )
 
-            safe_start_range_km = max(usable_start_range_km - safety_buffer_km, 1)
+            safe_start_range_km = max(
+                usable_start_range_km - safety_buffer_km,
+                1
+            )
 
-            safe_after_charge_range_km = max( usable_after_charge_range_km - safety_buffer_km, 1)
+            safe_after_charge_range_km = max(
+                usable_after_charge_range_km - safety_buffer_km,
+                1
+            )
 
             route_stop_targets = []
+
             distance_covered = safe_start_range_km
+
             while distance_covered < distance_km:
-                 route_stop_targets.append(distance_covered)
-                 distance_covered += safe_after_charge_range_km
-    
+                route_stop_targets.append(distance_covered)
+                distance_covered += safe_after_charge_range_km
+
             sequence_stops = []
             used_station_names = set()
 
@@ -1722,10 +1723,10 @@ elif page == "Real Route Optimizer":
 
                 if arrival_battery_percent < charge_from_percent:
                     battery_warning_triggered = True
-               
 
                 charge_needed_percent = max(
-                    dynamic_charge_to_percent - arrival_battery_percent, 0
+                    dynamic_charge_to_percent - arrival_battery_percent,
+                    0
                 )
 
                 energy_needed_kwh = (
@@ -1780,27 +1781,40 @@ elif page == "Real Route Optimizer":
                     .iloc[0]
                 )
 
-            used_station_names.add(best_stop["station_name"])
+                used_station_names.add(best_stop["station_name"])
 
-            charger_power_kw = max( float(best_stop["max_power_kw"])
-                if pd.notna(best_stop["max_power_kw"]) else 1, 1)
+                charger_power_kw = max(
+                    float(best_stop["max_power_kw"])
+                    if pd.notna(best_stop["max_power_kw"])
+                    else 1,
+                    1
+                )
 
-            departure_battery_percent = min( arrival_battery_percent + charge_needed_percent, 100)
+                departure_battery_percent = min(
+                    arrival_battery_percent + charge_needed_percent,
+                    100
+                )
 
-            effective_charger_power_kw = charger_power_kw
+                effective_charger_power_kw = charger_power_kw
 
-            if departure_battery_percent >= 80:
-               effective_charger_power_kw *= 0.55
-            elif departure_battery_percent >= 60:
-                effective_charger_power_kw *= 0.75
+                if departure_battery_percent >= 80:
+                    effective_charger_power_kw *= 0.55
+                elif departure_battery_percent >= 60:
+                    effective_charger_power_kw *= 0.75
 
-            effective_charger_power_kw = max(effective_charger_power_kw, 25)
+                effective_charger_power_kw = max(
+                    effective_charger_power_kw,
+                    25
+                )
 
-            estimated_charge_time_min = (energy_needed_kwh / effective_charger_power_kw) * 60
+                estimated_charge_time_min = (
+                    energy_needed_kwh / effective_charger_power_kw
+                ) * 60
 
-            current_battery_percent = departure_battery_percent
-            previous_distance_km = target_distance
-            sequence_stops.append({
+                current_battery_percent = departure_battery_percent
+                previous_distance_km = target_distance
+
+                sequence_stops.append({
                     "stop_number": len(sequence_stops) + 1,
                     "target_distance_km": round(target_distance, 1),
                     "station_name": best_stop["station_name"],
@@ -1818,10 +1832,14 @@ elif page == "Real Route Optimizer":
                         1
                     )
                 })
+
             if battery_warning_triggered:
-              st.warning(  "Battery may drop below the selected minimum arrival battery on one or more legs. " 
-                         "Consider increasing starting battery, using a longer-range EV, reducing the safety buffer, "
-                         "or choosing a different charging strategy.")
+                st.warning(
+                    "Battery may drop below the selected minimum arrival battery on one or more legs. "
+                    "Consider increasing starting battery, using a longer-range EV, reducing the safety buffer, "
+                    "or choosing a different charging strategy."
+                )
+
             if len(sequence_stops) == 0:
 
                 st.success(
@@ -1830,23 +1848,39 @@ elif page == "Real Route Optimizer":
 
             else:
 
-             sequence_df = pd.DataFrame(sequence_stops)
+                sequence_df = pd.DataFrame(sequence_stops)
 
-             total_charging_time_min = (sequence_df["estimated_charge_time_min"].sum())
+                total_charging_time_min = (
+                    sequence_df["estimated_charge_time_min"].sum()
+                )
 
-             total_trip_time_hours = ( duration_hours + (total_charging_time_min / 60))
+                total_trip_time_hours = (
+                    duration_hours + (total_charging_time_min / 60)
+                )
 
-             summary_col1, summary_col2, summary_col3 = st.columns(3)
+                summary_col1, summary_col2, summary_col3 = st.columns(3)
 
-             summary_col1.metric(  "Charging Stops",    len(sequence_df) )
+                summary_col1.metric(
+                    "Charging Stops",
+                    len(sequence_df)
+                )
 
-             summary_col2.metric(  "Total Charging Time",  f"{round(total_charging_time_min, 1)} min")
+                summary_col2.metric(
+                    "Total Charging Time",
+                    f"{round(total_charging_time_min, 1)} min"
+                )
 
-             summary_col3.metric("Total Trip Time", f"{round(total_trip_time_hours, 1)} hrs")
+                summary_col3.metric(
+                    "Total Trip Time",
+                    f"{round(total_trip_time_hours, 1)} hrs"
+                )
 
-             st.dataframe(sequence_df, use_container_width=True)
+                st.dataframe(
+                    sequence_df,
+                    use_container_width=True
+                )
 
-             st.subheader("Route Map with Recommended Chargers")
+            st.subheader("Route Map with Recommended Chargers")
 
             recommended_stops["plot_size"] = (
                 recommended_stops["max_power_kw"]
