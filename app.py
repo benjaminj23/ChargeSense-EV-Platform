@@ -148,7 +148,7 @@ page = st.sidebar.radio(
         "Future Pressure Forecast",
         "Route Intelligence",
         "Charging Type Mix",
-        "Predictive Maintenance",
+        "Reliability Risk Model",
         "Project Insights"
     ]
 )
@@ -936,68 +936,88 @@ elif page == "Charging Type Mix":
         ].head(30),
         use_container_width=True
     )
-elif page == "Predictive Maintenance":
+    
+elif page == "Reliability Risk Model":
 
-    st.title("🧠 Predictive Maintenance Prototype")
+    st.title("🧠 Reliability Risk Model")
 
     st.markdown("""
-    This prototype identifies charging stations with higher predicted reliability risk.
-    The current model is a rule-based ML prototype built from reliability-related features,
-    so it should be interpreted as an early warning system rather than a production-grade failure model.
+    This model estimates charger reliability risk using verification freshness,
+    data quality, charger power, and connector availability.
+
+    This is a rule-based risk model, not a production-grade ML failure prediction model.
     """)
 
-    ml_df["failure_risk_probability"] = pd.to_numeric(
-        ml_df["failure_risk_probability"],
-        errors="coerce"
+    risk_df = ocm_df.copy()
+
+    risk_df["reliability_risk_score"] = (
+        (risk_df["days_since_verified"].fillna(365) * 0.25)
+        + ((100 - risk_df["reliability_score"].fillna(0)) * 0.4)
+        + ((50 - risk_df["max_power_kw"].fillna(0).clip(upper=50)) * 0.2)
+        + ((2 - risk_df["num_connections"].fillna(0).clip(upper=2)) * 10)
     )
 
-    high_risk = ml_df[
-        ml_df["failure_risk_probability"] >= 0.7
-    ].copy()
+    risk_df["reliability_risk_score"] = (
+        risk_df["reliability_risk_score"]
+        .clip(lower=0, upper=100)
+        .round(2)
+    )
+
+    def risk_label(score):
+        if score >= 70:
+            return "High Risk"
+        elif score >= 40:
+            return "Medium Risk"
+        return "Low Risk"
+
+    risk_df["risk_label"] = risk_df["reliability_risk_score"].apply(risk_label)
 
     col1, col2, col3 = st.columns(3)
 
-    col1.metric("Stations Scored", len(ml_df))
-    col2.metric("High Risk Stations", len(high_risk))
-    col3.metric(
-        "Avg Failure Risk Probability",
-        round(ml_df["failure_risk_probability"].mean(), 2)
+    col1.metric("Stations Scored", len(risk_df))
+
+    col2.metric(
+        "High Risk Stations",
+        len(risk_df[risk_df["risk_label"] == "High Risk"])
     )
 
-    st.subheader("Highest Predicted Reliability Risk")
+    col3.metric(
+        "Average Risk Score",
+        round(risk_df["reliability_risk_score"].mean(), 2)
+    )
 
-    risk_table = (
-        ml_df[
+    st.subheader("Highest Reliability Risk Stations")
+
+    st.dataframe(
+        risk_df[
             [
                 "station_name",
                 "state_clean",
                 "max_power_kw",
                 "reliability_score",
                 "days_since_verified",
-                "failure_risk_probability",
-                "predicted_failure_risk"
+                "num_connections",
+                "reliability_risk_score",
+                "risk_label"
             ]
         ]
-        .sort_values("failure_risk_probability", ascending=False)
-    )
-
-    st.dataframe(
-        risk_table.head(25),
+        .sort_values("reliability_risk_score", ascending=False)
+        .head(25),
         use_container_width=True
     )
 
-    st.subheader("Predicted Risk Distribution")
+    st.subheader("Reliability Risk Distribution")
 
     risk_dist = (
-        ml_df["predicted_failure_risk"]
+        risk_df["risk_label"]
         .value_counts()
         .reset_index()
     )
 
-    risk_dist.columns = ["Predicted Risk Class", "Count"]
+    risk_dist.columns = ["Risk Label", "Count"]
 
     st.bar_chart(
-        risk_dist.set_index("Predicted Risk Class")
+        risk_dist.set_index("Risk Label")
     )
 # -----------------------------------
 # PROJECT INSIGHTS
