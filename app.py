@@ -1420,6 +1420,20 @@ elif page == "Real Route Optimizer":
     st.info(
         f"{selected_ev}: {battery_kwh} kWh battery, approx. {ev_range_km} km driving range."
     )
+    charging_strategy = st.selectbox(
+    "Charging Strategy",
+    [
+        "Conservative",
+        "Fastest Trip",
+        "Fewest Stops"
+    ]) 
+    if charging_strategy == "Conservative":
+    dynamic_charge_to_percent = 80
+    elif charging_strategy == "Fastest Trip":
+    dynamic_charge_to_percent = 60
+    else:
+    dynamic_charge_to_percent = 90
+
 
     col1, col2 = st.columns(2)
 
@@ -1458,17 +1472,15 @@ elif page == "Real Route Optimizer":
         )
 
     with col3:
-        charge_to_percent = st.slider(
-            "Target Battery After Charging (%)",
-            50,
-            100,
-            80
-        )
+        st.metric(
+        "Target Battery Strategy",
+        f"{dynamic_charge_to_percent}%"
+       )
 
     if st.button("Generate Real Route"):
 
-        if charge_to_percent <= charge_from_percent:
-            st.warning("Target battery must be higher than minimum arrival battery.")
+        if dynamic_charge_to_percent <= charge_from_percent::
+            st.warning("Charging strategy target must be higher than minimum arrival battery.")
             st.stop()
 
         if route_input_mode == "Major City":
@@ -1715,8 +1727,7 @@ elif page == "Real Route Optimizer":
                     )
 
                 charge_needed_percent = max(
-                    charge_to_percent - arrival_battery_percent,
-                    0
+                    dynamic_charge_to_percent - arrival_battery_percent, 0
                 )
 
                 energy_needed_kwh = (
