@@ -157,6 +157,15 @@ state_metrics = state_metrics.merge(
     on="state_clean",
     how="left"
 )
+state_metrics["chargers_per_1000_evs"] = (
+    state_metrics["total_stations"]
+    / state_metrics["estimated_ev_count"]
+) * 1000
+
+state_metrics["chargers_per_1000_evs"] = (
+    state_metrics["chargers_per_1000_evs"]
+    .round(2)
+)
 # -----------------------------
 # SIDEBAR
 # -----------------------------
@@ -262,8 +271,10 @@ elif page == "Infrastructure Gap Analysis":
             [
                 "state_clean",
                 "population",
+                "estimated_ev_count",
                 "total_stations",
                 "chargers_per_million",
+                "chargers_per_1000_evs",
                 "ultra_fast_sites",
                 "ultra_fast_ratio",
                 "avg_reliability",
@@ -289,6 +300,11 @@ elif page == "Infrastructure Gap Analysis":
 
     st.subheader("Chargers per Million People")
     st.bar_chart(gap_view.set_index("state_clean")["chargers_per_million"])
+    st.subheader("Chargers per 1,000 EVs")
+
+    st.bar_chart(
+      gap_view.set_index("state_clean")["chargers_per_1000_evs"]
+    )
 
 # -----------------------------
 # INTERACTIVE MAP
