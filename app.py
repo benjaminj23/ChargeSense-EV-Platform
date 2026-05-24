@@ -1784,40 +1784,24 @@ elif page == "Real Route Optimizer":
 
                 used_station_names.add(best_stop["station_name"])
 
-                charger_power_kw = max(
-                    float(best_stop["max_power_kw"])
-                    if pd.notna(best_stop["max_power_kw"])
-                    else 1,
-                    1
-                )
+               charger_power_kw = max( float(best_stop["max_power_kw"])
+                if pd.notna(best_stop["max_power_kw"]) else 1, 1)
 
-                effective_charger_power_kw = charger_power_kw
+            departure_battery_percent = min( arrival_battery_percent + charge_needed_percent, 100)
 
-                if departure_battery_percent >= 80:
-                   effective_charger_power_kw *= 0.55
-                elif departure_battery_percent >= 60:
-                   effective_charger_power_kw *= 0.75
+            effective_charger_power_kw = charger_power_kw
 
-                effective_charger_power_kw = max(effective_charger_power_kw,25)
-                
-                departure_battery_percent = min(
-                    arrival_battery_percent + charge_needed_percent,
-                    100
-                )
-                effective_charger_power_kw = charger_power_kw
+            if departure_battery_percent >= 80:
+               effective_charger_power_kw *= 0.55
+            elif departure_battery_percent >= 60:
+                effective_charger_power_kw *= 0.75
 
-                if departure_battery_percent >= 80:
-                    effective_charger_power_kw *= 0.55
-                elif departure_battery_percent >= 60:
-                    effective_charger_power_kw *= 0.75
+            effective_charger_power_kw = max(effective_charger_power_kw, 25)
 
-                effective_charger_power_kw = max(effective_charger_power_kw,  25)
+            estimated_charge_time_min = (energy_needed_kwh / effective_charger_power_kw) * 60
 
-                estimated_charge_time_min = (  energy_needed_kwh / effective_charger_power_kw) * 60
-
-                current_battery_percent = departure_battery_percent
-                previous_distance_km = target_distance
-
+            current_battery_percent = departure_battery_percent
+            previous_distance_km = target_distance
                 sequence_stops.append({
                     "stop_number": len(sequence_stops) + 1,
                     "target_distance_km": round(target_distance, 1),
