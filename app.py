@@ -1021,9 +1021,7 @@ elif page == "Reliability Risk Model":
     st.bar_chart(
         risk_dist.set_index("Risk Label")
     )
-# -----------------------------------
-# PROJECT INSIGHTS
-# -----------------------------------
+
 elif page == "Dynamic Pricing Simulator":
 
     st.title("💸 Dynamic Pricing Simulator")
@@ -1088,6 +1086,85 @@ elif page == "Dynamic Pricing Simulator":
     st.bar_chart(
         price_state.set_index("state_clean")
     )
+
+elif page == "Infrastructure Investment Simulator":
+
+    st.title("🏗️ Infrastructure Investment Simulator")
+
+    st.markdown("""
+    Simulate how adding new ultra-fast charging stations could reduce infrastructure gaps.
+    """)
+
+    selected_state_invest = st.selectbox(
+        "Select State",
+        sorted(state_metrics["state_clean"].dropna().unique()),
+        key="investment_state"
+    )
+
+    new_chargers = st.slider(
+        "New Ultra-fast Chargers Added",
+        0,
+        500,
+        50
+    )
+
+    invest_df = state_metrics.copy()
+
+    current_row = invest_df[
+        invest_df["state_clean"] == selected_state_invest
+    ].iloc[0]
+
+    current_stations = current_row["total_stations"]
+    current_ultra_fast = current_row["ultra_fast_sites"]
+
+    updated_stations = current_stations + new_chargers
+    updated_ultra_fast = current_ultra_fast + new_chargers
+
+    updated_chargers_per_million = (
+        updated_stations / current_row["population"]
+    ) * 1_000_000
+
+    updated_ultra_fast_ratio = (
+        updated_ultra_fast / updated_stations
+    )
+
+    current_gap = current_row["infrastructure_gap_score"]
+
+    updated_gap = (
+        (100 - min(updated_chargers_per_million, 100)) * 0.4
+        + (100 - current_row["avg_reliability"]) * 0.3
+        + (1 - updated_ultra_fast_ratio) * 100 * 0.3
+    )
+
+    updated_gap = max(0, min(100, round(updated_gap, 2)))
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "Current Gap Score",
+        round(current_gap, 2)
+    )
+
+    col2.metric(
+        "Updated Gap Score",
+        updated_gap
+    )
+
+    col3.metric(
+        "Gap Reduction",
+        round(current_gap - updated_gap, 2)
+    )
+
+    st.subheader("Investment Scenario Summary")
+
+    st.write(
+        f"Adding **{new_chargers} ultra-fast chargers** in **{selected_state_invest}** "
+        f"would increase charger density from **{round(current_row['chargers_per_million'], 1)}** "
+        f"to **{round(updated_chargers_per_million, 1)} chargers per million people**."
+    )
+# -----------------------------------
+# PROJECT INSIGHTS
+# -----------------------------------
 
 elif page == "Project Insights":
 
