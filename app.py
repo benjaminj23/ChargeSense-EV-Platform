@@ -150,6 +150,7 @@ page = st.sidebar.radio(
         "Charging Type Mix",
         "Reliability Risk Model",
         "Dynamic Pricing Simulator",
+        "Infrastructure Investment Simulator",  
         "Project Insights"
     ]
 )
