@@ -143,6 +143,7 @@ page = st.sidebar.radio(
         "Interactive Map",
         "Reliability Intelligence",
         "Charger Recommendation",
+        "Queue Simulation Engine",
         "Reservation Simulation",
         "Congestion Risk Analysis",
         "Future Pressure Forecast",
