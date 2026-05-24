@@ -2159,6 +2159,24 @@ elif page == "Real Route Optimizer":
                     use_container_width=True
                 )
 
+                st.subheader("Why These Stops Were Recommended")
+                for _, stop in sequence_df.iterrows():
+                    st.markdown(
+                    f"""
+                    **Stop {int(stop["stop_number"])}: {stop["station_name"]}**
+
+                    Recommended because:
+                    - Charger speed: **{stop["max_power_kw"]} kW**
+                    - Availability estimate: **{stop["availability_status"]}**
+                    - Amenity type: **{stop["amenity_label"]}**
+                    - Expected arrival battery: **{stop["arrival_battery_%"]}%**
+                    - Expected departure battery: **{stop["departure_battery_%"]}%**
+                    - Estimated charging time: **{stop["estimated_charge_time_min"]} minutes**
+                    - Estimated charging cost: **${stop["estimated_charge_cost_aud"]}**
+                    - Detour from target point: **{stop["distance_to_target_km"]} km**
+                    """
+                  )
+
                 csv_sequence = sequence_df.to_csv(index=False)
 
                 st.download_button(
