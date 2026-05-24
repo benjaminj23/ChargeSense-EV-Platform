@@ -183,7 +183,7 @@ page = st.sidebar.radio(
         "Model Assumptions",
         "Project Insights"
     ],
-)
+ )
 )
 
 # -----------------------------
