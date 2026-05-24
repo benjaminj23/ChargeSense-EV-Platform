@@ -1799,12 +1799,21 @@ elif page == "Real Route Optimizer":
                    effective_charger_power_kw *= 0.75
 
                 effective_charger_power_kw = max(effective_charger_power_kw,25)
-                estimated_charge_time_min = (energy_needed_kwh / effective_charger_power_kw) * 60
                 
                 departure_battery_percent = min(
                     arrival_battery_percent + charge_needed_percent,
                     100
                 )
+                effective_charger_power_kw = charger_power_kw
+
+                if departure_battery_percent >= 80:
+                    effective_charger_power_kw *= 0.55
+                elif departure_battery_percent >= 60:
+                    effective_charger_power_kw *= 0.75
+
+                effective_charger_power_kw = max(effective_charger_power_kw,  25)
+
+                estimated_charge_time_min = (  energy_needed_kwh / effective_charger_power_kw) * 60
 
                 current_battery_percent = departure_battery_percent
                 previous_distance_km = target_distance
