@@ -440,7 +440,116 @@ elif page == "Reservation Simulation":
         st.write("Expiry time:", expiry_time.strftime("%Y-%m-%d %H:%M:%S"))
 
         st.code(f"ACCESS CODE: {access_code}")
+elif page == "Congestion Risk Analysis":
 
+    st.title("🚦 Congestion Risk Analysis")
+
+    st.markdown("""
+    Estimate EV charging congestion risk using charger power,
+    reliability, and infrastructure availability indicators.
+    """)
+
+    congestion_df = ocm_df.copy()
+
+    congestion_df["max_power_kw"] = (
+        congestion_df["max_power_kw"]
+        .fillna(0)
+    )
+
+    # Higher congestion risk:
+    # - lower charger power
+    # - lower reliability
+    # - fewer stations
+
+    state_station_counts = (
+        congestion_df.groupby("state_clean")
+        .size()
+        .to_dict()
+    )
+
+    congestion_df["state_station_count"] = (
+        congestion_df["state_clean"]
+        .map(state_station_counts)
+    )
+
+    congestion_df["congestion_risk_score"] = (
+        (
+            100
+            - congestion_df["reliability_score"]
+        ) * 0.4
+        +
+        (
+            150
+            - congestion_df["max_power_kw"]
+            .clip(upper=150)
+        ) * 0.3
+        +
+        (
+            100
+            / congestion_df["state_station_count"]
+            .clip(lower=1)
+        ) * 30
+    )
+
+    congestion_df["congestion_risk_score"] = (
+        congestion_df["congestion_risk_score"]
+        .clip(lower=0, upper=100)
+        .round(2)
+    )
+
+    def congestion_label(score):
+        if score >= 70:
+            return "High Risk"
+        elif score >= 40:
+            return "Medium Risk"
+        else:
+            return "Low Risk"
+
+    congestion_df["congestion_label"] = (
+        congestion_df["congestion_risk_score"]
+        .apply(congestion_label)
+    )
+
+    st.subheader("Highest Congestion Risk Stations")
+
+    risk_view = (
+        congestion_df[
+            [
+                "station_name",
+                "state_clean",
+                "max_power_kw",
+                "reliability_score",
+                "congestion_risk_score",
+                "congestion_label"
+            ]
+        ]
+        .sort_values(
+            "congestion_risk_score",
+            ascending=False
+        )
+    )
+
+    st.dataframe(
+        risk_view.head(20),
+        use_container_width=True
+    )
+
+    st.subheader("Congestion Risk Distribution")
+
+    congestion_dist = (
+        congestion_df["congestion_label"]
+        .value_counts()
+        .reset_index()
+    )
+
+    congestion_dist.columns = [
+        "Congestion Risk",
+        "Count"
+    ]
+
+    st.bar_chart(
+        congestion_dist.set_index("Congestion Risk")
+    )
 # -----------------------------------
 # PROJECT INSIGHTS
 # -----------------------------------
