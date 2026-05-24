@@ -1315,9 +1315,6 @@ elif page == "Real Route Optimizer":
             index=cities.index("Melbourne")
         )
 
-    start_coords = city_coordinates[start_city]
-    end_coords = city_coordinates[destination_city]
-
     route_buffer_km = st.slider(
         "Maximum Distance from Route (km)",
         10,
@@ -1325,9 +1322,28 @@ elif page == "Real Route Optimizer":
         50
     )
 
+    ev_range_km = st.slider(
+        "Estimated EV Driving Range (km)",
+        150,
+        700,
+        350
+    )
+
+    safety_buffer_km = st.slider(
+        "Safety Buffer Before Charging (km)",
+        20,
+        100,
+        50
+    )
+
+    start_coords = city_coordinates[start_city]
+    end_coords = city_coordinates[destination_city]
+
     if start_city == destination_city:
         st.warning("Start city and destination city cannot be the same.")
+
     else:
+
         if st.button("Generate Real Route"):
 
             with st.spinner("Calculating route..."):
@@ -1349,6 +1365,7 @@ elif page == "Real Route Optimizer":
                         params=params,
                         timeout=30
                     )
+
                 except requests.exceptions.RequestException as e:
                     st.error("Could not connect to OSRM routing service.")
                     st.write(str(e))
@@ -1361,8 +1378,8 @@ elif page == "Real Route Optimizer":
 
                 route_data = response.json()
 
-                if "routes" not in route_data or len(route_data["routes"]) == 0:
-                    st.error("No route found.")
+                if "routes" not in route_data:
+                    st.error("No routes returned.")
                     st.stop()
 
                 route = route_data["routes"][0]
@@ -1375,20 +1392,21 @@ elif page == "Real Route Optimizer":
                 )
 
                 distance_km = route["distance"] / 1000
+
                 duration_hours = route["duration"] / 3600
 
                 st.success(
                     f"Route generated from {start_city} to {destination_city}"
                 )
 
-                col1, col2 = st.columns(2)
+                metric_col1, metric_col2 = st.columns(2)
 
-                col1.metric(
+                metric_col1.metric(
                     "Route Distance",
                     f"{round(distance_km, 1)} km"
                 )
 
-                col2.metric(
+                metric_col2.metric(
                     "Estimated Drive Time",
                     f"{round(duration_hours, 1)} hrs"
                 )
@@ -1416,7 +1434,8 @@ elif page == "Real Route Optimizer":
 
                 route_map_df["route_score"] = (
                     route_map_df["max_power_kw"].fillna(0) * 0.6
-                    + route_map_df["reliability_score"].fillna(0) * 0.4
+                    +
+                    route_map_df["reliability_score"].fillna(0) * 0.4
                 )
 
                 sampled_route = route_df.iloc[
@@ -1424,6 +1443,7 @@ elif page == "Real Route Optimizer":
                 ].copy()
 
                 def nearest_route_distance(row):
+
                     distances = sampled_route.apply(
                         lambda point: haversine_distance(
                             row["latitude"],
@@ -1452,14 +1472,11 @@ elif page == "Real Route Optimizer":
                 )
 
                 st.info(
-                    f"Found {len(near_route_df)} chargers within {route_buffer_km} km of the route."
+                    f"Found {len(near_route_df)} chargers within "
+                    f"{route_buffer_km} km of the route."
                 )
 
                 st.subheader("Recommended Charging Stops Near Route")
-
-                if len(recommended_stops) == 0:
-                    st.warning("No chargers found within the selected route buffer.")
-                    st.stop()
 
                 st.dataframe(
                     recommended_stops[
@@ -1476,7 +1493,120 @@ elif page == "Real Route Optimizer":
                     use_container_width=True
                 )
 
-                st.subheader("Route Map with Recommended Chargers")
+                st.subheader("Suggested Charging Stop Sequence")
+
+                stop_interval_km = (
+                    ev_range_km - safety_buffer_km
+                )
+
+                num_stops_needed = max(
+                    1,
+                    int(distance_km // stop_interval_km)
+                )
+
+                route_stop_targets = [
+                    (i + 1) * stop_interval_km
+                    for i in range(num_stops_needed)
+                    if (i + 1) * stop_interval_km < distance_km
+                ]
+
+                sequence_stops = []
+
+                for target_distance in route_stop_targets:
+
+                    target_ratio = (
+                        target_distance / distance_km
+                    )
+
+                    target_index = int(
+                        target_ratio * len(route_df)
+                    )
+
+                    target_index = min(
+                        max(target_index, 0),
+                        len(route_df) - 1
+                    )
+
+                    target_point = route_df.iloc[target_index]
+
+                    candidate_stops = recommended_stops.copy()
+
+                    candidate_stops["distance_to_target_km"] = (
+                        candidate_stops.apply(
+                            lambda row: haversine_distance(
+                                row["latitude"],
+                                row["longitude"],
+                                target_point["latitude"],
+                                target_point["longitude"]
+                            ),
+                            axis=1
+                        )
+                    )
+
+                    best_stop = (
+                        candidate_stops
+                        .sort_values(
+                            [
+                                "distance_to_target_km",
+                                "route_score"
+                            ],
+                            ascending=[True, False]
+                        )
+                        .iloc[0]
+                    )
+
+                    sequence_stops.append({
+                        "stop_number":
+                            len(sequence_stops) + 1,
+
+                        "target_distance_km":
+                            round(target_distance, 1),
+
+                        "station_name":
+                            best_stop["station_name"],
+
+                        "town":
+                            best_stop["town"],
+
+                        "state_clean":
+                            best_stop["state_clean"],
+
+                        "max_power_kw":
+                            best_stop["max_power_kw"],
+
+                        "reliability_score":
+                            best_stop["reliability_score"],
+
+                        "route_score":
+                            best_stop["route_score"],
+
+                        "distance_to_target_km":
+                            round(
+                                best_stop[
+                                    "distance_to_target_km"
+                                ],
+                                1
+                            )
+                    })
+
+                if len(sequence_stops) == 0:
+
+                    st.success(
+                        "No charging stop required based on selected EV range."
+                    )
+
+                else:
+
+                    sequence_df = pd.DataFrame(sequence_stops)
+
+                    st.dataframe(
+                        sequence_df,
+                        use_container_width=True
+                    )
+
+                st.subheader(
+                    "Route Map with Recommended Chargers"
+                )
 
                 recommended_stops["plot_size"] = (
                     recommended_stops["max_power_kw"]
@@ -1516,7 +1646,12 @@ elif page == "Real Route Optimizer":
 
                 fig.update_layout(
                     mapbox_style="open-street-map",
-                    margin={"r": 0, "t": 0, "l": 0, "b": 0}
+                    margin={
+                        "r": 0,
+                        "t": 0,
+                        "l": 0,
+                        "b": 0
+                    }
                 )
 
                 st.plotly_chart(
