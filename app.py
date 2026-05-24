@@ -1479,7 +1479,7 @@ elif page == "Real Route Optimizer":
 
     if st.button("Generate Real Route"):
 
-        if dynamic_charge_to_percent <= charge_from_percent::
+        if dynamic_charge_to_percent <= charge_from_percent:
             st.warning("Charging strategy target must be higher than minimum arrival battery.")
             st.stop()
 
