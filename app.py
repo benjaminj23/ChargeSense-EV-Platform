@@ -1307,7 +1307,7 @@ elif page == "Real Route Optimizer":
     
 
         def geocode_place(place_name):
-        url = "https://nominatim.openstreetmap.org/search"
+         url = "https://nominatim.openstreetmap.org/search"
 
         params = {
             "q": place_name,
