@@ -1713,6 +1713,8 @@ elif page == "Real Route Optimizer":
                         "state_clean",
                         "max_power_kw",
                         "reliability_score",
+                        "availability_status",
+                        "availability_score",
                         "route_score",
                         "route_recommendation_score",
                         "distance_to_route_km"
@@ -1870,6 +1872,8 @@ elif page == "Real Route Optimizer":
                     "state_clean": best_stop["state_clean"],
                     "max_power_kw": best_stop["max_power_kw"],
                     "reliability_score": best_stop["reliability_score"],
+                    "availability_status": best_stop["availability_status"],
+                    "availability_score": best_stop["availability_score"],
                     "route_score": best_stop["route_score"],
                     "arrival_battery_%": round(arrival_battery_percent, 1),
                     "departure_battery_%": round(departure_battery_percent, 1),
