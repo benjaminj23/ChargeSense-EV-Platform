@@ -55,7 +55,15 @@ ocm_df["reliability_score"] = (
 ocm_df["reliability_score"] = (
     ocm_df["reliability_score"].clip(lower=0, upper=100).round(2)
 )
+# normalize reliability scores
+max_rel = ocm_df["reliability_score"].max()
 
+if max_rel > 0:
+    ocm_df["reliability_score_normalized"] = (
+        ocm_df["reliability_score"] / max_rel
+    ) * 100
+else:
+    ocm_df["reliability_score_normalized"] = 0
 
 def reliability_label(score):
     if score >= 70:
@@ -87,7 +95,7 @@ state_metrics = (
     .agg(
         total_stations=("station_name", "count"),
         avg_power_kw=("max_power_kw", "mean"),
-        avg_reliability=("reliability_score", "mean"),
+        avg_reliability_normalized=( "reliability_score_normalized", "mean"),,
         ultra_fast_sites=("speed_category", lambda x: (x == "Ultra-fast DC").sum()),
         population=("population", "first"),
     )
@@ -104,7 +112,7 @@ state_metrics["ultra_fast_ratio"] = (
 
 state_metrics["infrastructure_gap_score"] = (
     (100 - state_metrics["chargers_per_million"].clip(upper=100)) * 0.4
-    + (100 - state_metrics["avg_reliability"]) * 0.3
+    + (100 - state_metrics["avg_reliability_normalized"]) * 0.3
     + (1 - state_metrics["ultra_fast_ratio"]) * 100 * 0.3
 )
 
@@ -235,7 +243,7 @@ elif page == "Infrastructure Gap Analysis":
                 "chargers_per_million",
                 "ultra_fast_sites",
                 "ultra_fast_ratio",
-                "avg_reliability",
+                "avg_reliability_normalized",
                 "infrastructure_gap_score",
             ]
         ]
@@ -1134,7 +1142,7 @@ elif page == "Charger Desert Detector":
     desert_df["desert_score"] = (
         (100 - desert_df["chargers_per_million"].clip(upper=100)) * 0.5
         + (1 - desert_df["ultra_fast_ratio"]) * 100 * 0.3
-        + (100 - desert_df["avg_reliability"]) * 0.2
+        + (100 - desert_df["avg_reliability_normalized"]) * 0.2
     )
 
     desert_df["desert_score"] = (
@@ -1168,7 +1176,7 @@ elif page == "Charger Desert Detector":
                 "total_stations",
                 "chargers_per_million",
                 "ultra_fast_ratio",
-                "avg_reliability",
+                "avg_reliability_normalized",
                 "desert_score",
                 "desert_label",
             ]
