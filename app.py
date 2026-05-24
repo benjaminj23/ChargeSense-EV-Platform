@@ -1802,7 +1802,7 @@ elif page == "Real Route Optimizer":
 
             current_battery_percent = departure_battery_percent
             previous_distance_km = target_distance
-                sequence_stops.append({
+            sequence_stops.append({
                     "stop_number": len(sequence_stops) + 1,
                     "target_distance_km": round(target_distance, 1),
                     "station_name": best_stop["station_name"],
