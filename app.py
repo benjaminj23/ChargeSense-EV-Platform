@@ -1428,11 +1428,11 @@ elif page == "Real Route Optimizer":
         "Fewest Stops"
     ]) 
     if charging_strategy == "Conservative":
-    dynamic_charge_to_percent = 80
+     dynamic_charge_to_percent = 80
     elif charging_strategy == "Fastest Trip":
-    dynamic_charge_to_percent = 60
+     dynamic_charge_to_percent = 60
     else:
-    dynamic_charge_to_percent = 90
+     dynamic_charge_to_percent = 90
 
 
     col1, col2 = st.columns(2)
