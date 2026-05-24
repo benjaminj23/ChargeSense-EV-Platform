@@ -1603,6 +1603,9 @@ elif page == "Charger Desert Detector":
     st.bar_chart(
         desert_df.set_index("state_clean")["desert_score"]
     )
+    st.caption(
+    "Note: Desert scores use available public dataset quality, charger density, ultra-fast coverage, and reliability proxies. Scores indicate relative undersupply risk, not confirmed infrastructure failure."
+)
 
 # -----------------------------------
 # PROJECT INSIGHTS
