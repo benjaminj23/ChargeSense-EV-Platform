@@ -1782,9 +1782,9 @@ elif page == "Real Route Optimizer":
                     .iloc[0]
                 )
 
-                used_station_names.add(best_stop["station_name"])
+            used_station_names.add(best_stop["station_name"])
 
-               charger_power_kw = max( float(best_stop["max_power_kw"])
+            charger_power_kw = max( float(best_stop["max_power_kw"])
                 if pd.notna(best_stop["max_power_kw"]) else 1, 1)
 
             departure_battery_percent = min( arrival_battery_percent + charge_needed_percent, 100)
