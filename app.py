@@ -156,6 +156,7 @@ page = st.sidebar.radio(
         "Availability Stress Test",
         "EV Adoption Impact",
         "Charger Desert Detector",
+        "Peak Surge Simulator",
         "Project Insights"
     ]
 )
@@ -1606,6 +1607,115 @@ elif page == "Charger Desert Detector":
     st.caption(
     "Note: Desert scores use available public dataset quality, charger density, ultra-fast coverage, and reliability proxies. Scores indicate relative undersupply risk, not confirmed infrastructure failure."
 )
+
+elif page == "Peak Surge Simulator":
+
+    st.title("🏖️ Peak Holiday Surge Simulator")
+
+    st.markdown("""
+    Simulate how holiday or long-weekend travel surges could increase charging pressure.
+    Useful for understanding regional fast-charger bottlenecks during peak travel periods.
+    """)
+
+    surge_df = ocm_df.copy()
+
+    selected_surge_state = st.selectbox(
+        "Select State",
+        sorted(surge_df["state_clean"].dropna().unique()),
+        key="surge_state"
+    )
+
+    travel_surge = st.slider(
+        "Travel Demand Surge (%)",
+        0,
+        300,
+        100
+    )
+
+    avg_session_minutes = st.slider(
+        "Average Charging Session Duration",
+        10,
+        90,
+        35
+    )
+
+    surge_state_df = surge_df[
+        surge_df["state_clean"] == selected_surge_state
+    ].copy()
+
+    surge_state_df["total_connector_quantity"] = pd.to_numeric(
+        surge_state_df["total_connector_quantity"],
+        errors="coerce"
+    ).fillna(1)
+
+    surge_state_df["hourly_capacity"] = (
+        surge_state_df["total_connector_quantity"]
+        * (60 / avg_session_minutes)
+    )
+
+    base_arrivals = 10
+
+    surge_state_df["surge_arrivals_per_hour"] = (
+        base_arrivals
+        * (1 + travel_surge / 100)
+    )
+
+    surge_state_df["surge_pressure_ratio"] = (
+        surge_state_df["surge_arrivals_per_hour"]
+        / surge_state_df["hourly_capacity"].replace(0, 1)
+    )
+
+    surge_state_df["estimated_surge_wait"] = (
+        (surge_state_df["surge_pressure_ratio"] - 1)
+        .clip(lower=0)
+        * avg_session_minutes
+    ).round(1)
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "Stations Simulated",
+        len(surge_state_df)
+    )
+
+    col2.metric(
+        "Avg Surge Wait",
+        round(surge_state_df["estimated_surge_wait"].mean(), 1)
+    )
+
+    col3.metric(
+        "Max Surge Wait",
+        round(surge_state_df["estimated_surge_wait"].max(), 1)
+    )
+
+    st.subheader("Stations Most Exposed to Holiday Surge")
+
+    st.dataframe(
+        surge_state_df[
+            [
+                "station_name",
+                "town",
+                "state_clean",
+                "total_connector_quantity",
+                "hourly_capacity",
+                "surge_arrivals_per_hour",
+                "estimated_surge_wait",
+                "reliability_score"
+            ]
+        ]
+        .sort_values("estimated_surge_wait", ascending=False)
+        .head(25),
+        use_container_width=True
+    )
+
+    st.subheader("Holiday Surge Wait Distribution")
+
+    st.bar_chart(
+        surge_state_df
+        .sort_values("estimated_surge_wait", ascending=False)
+        .head(20)
+        .set_index("station_name")["estimated_surge_wait"]
+    )
 
 # -----------------------------------
 # PROJECT INSIGHTS
