@@ -149,6 +149,7 @@ page = st.sidebar.radio(
         "Route Intelligence",
         "Charging Type Mix",
         "Reliability Risk Model",
+        "Dynamic Pricing Simulator",
         "Project Insights"
     ]
 )
@@ -1022,6 +1023,70 @@ elif page == "Reliability Risk Model":
 # -----------------------------------
 # PROJECT INSIGHTS
 # -----------------------------------
+elif page == "Dynamic Pricing Simulator":
+
+    st.title("💸 Dynamic Pricing Simulator")
+
+    st.markdown("""
+    Simulate how EV charging prices could change based on charger speed,
+    congestion risk, and reliability.
+    """)
+
+    pricing_df = ocm_df.copy()
+
+    pricing_df["base_price_per_kwh"] = st.slider(
+        "Base Price per kWh ($)",
+        0.20,
+        1.00,
+        0.45,
+        0.05
+    )
+
+    pricing_df["speed_premium"] = pricing_df["max_power_kw"].fillna(0).apply(
+        lambda x: 0.25 if x >= 150 else 0.10 if x >= 50 else 0.00
+    )
+
+    pricing_df["reliability_discount"] = pricing_df["reliability_score"].fillna(0).apply(
+        lambda x: 0.05 if x >= 70 else 0.00
+    )
+
+    pricing_df["simulated_price_per_kwh"] = (
+        pricing_df["base_price_per_kwh"]
+        + pricing_df["speed_premium"]
+        - pricing_df["reliability_discount"]
+    ).round(2)
+
+    st.subheader("Simulated Charging Prices")
+
+    st.dataframe(
+        pricing_df[
+            [
+                "station_name",
+                "state_clean",
+                "max_power_kw",
+                "reliability_score",
+                "speed_premium",
+                "reliability_discount",
+                "simulated_price_per_kwh"
+            ]
+        ]
+        .sort_values("simulated_price_per_kwh", ascending=False)
+        .head(25),
+        use_container_width=True
+    )
+
+    st.subheader("Average Simulated Price by State")
+
+    price_state = (
+        pricing_df.groupby("state_clean")["simulated_price_per_kwh"]
+        .mean()
+        .reset_index()
+        .sort_values("simulated_price_per_kwh", ascending=False)
+    )
+
+    st.bar_chart(
+        price_state.set_index("state_clean")
+    )
 
 elif page == "Project Insights":
 
