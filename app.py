@@ -624,8 +624,8 @@ elif page == "Project Insights":
     **4. Public EV datasets need cleaning.**  
     Inconsistent state and location metadata show why infrastructure data products need strong data quality checks.
 
-    **5. Operator fragmentation creates user friction.**  
-    Drivers may need multiple charging apps because infrastructure is split across different providers.
+    **5. Charging type mix reveals infrastructure maturity.**  
+    Regions with more ultra-fast DC chargers are better positioned for long-distance EV adoption and queue reduction.
 
     **6. ChargeSense can evolve into a decision-support tool.**  
     Future versions could support charger investment planning, congestion forecasting,
