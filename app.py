@@ -551,7 +551,7 @@ elif page == "Congestion Risk Analysis":
     st.bar_chart(
         congestion_dist.set_index("Congestion Risk")
     )
-elif page == "Operator Fragmentation":
+ elif page == "Operator Fragmentation":
 
     st.title("🧩 Operator Fragmentation Analysis")
 
