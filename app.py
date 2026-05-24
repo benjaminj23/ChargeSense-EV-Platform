@@ -77,7 +77,27 @@ ocm_df["reliability_score"] = (
     .clip(lower=0, upper=100)
     .round(2)
 )
+def haversine_distance(lat1, lon1, lat2, lon2):
+    import math
 
+    radius_km = 6371
+
+    lat1 = math.radians(lat1)
+    lon1 = math.radians(lon1)
+    lat2 = math.radians(lat2)
+    lon2 = math.radians(lon2)
+
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    )
+
+    c = 2 * math.asin(math.sqrt(a))
+
+    return radius_km * c
 def reliability_label(score):
     if score >= 70:
         return "High"
@@ -1834,11 +1854,27 @@ elif page == "Real Route Optimizer":
                     + route_map_df["reliability_score"].fillna(0) * 0.4
                 )
 
-                recommended_stops = (
-                    route_map_df
-                    .sort_values("route_score", ascending=False)
-                    .head(30)
-                )
+                sampled_route = route_df.iloc[::max(1, len(route_df) // 100)].copy()
+                def nearest_route_distance(row):
+                   distances = sampled_route.apply(
+                   lambda point: haversine_distance(
+                   row["latitude"],
+                   row["longitude"],
+                   point["latitude"],
+                   point["longitude"]
+                    ),
+                   axis=1
+                  )
+                 return distances.min()
+
+                route_map_df["distance_to_route_km"] = route_map_df.apply(
+                nearest_route_distance,
+                axis=1
+               )
+
+                near_route_df = route_map_df[
+                route_map_df["distance_to_route_km"] <= 50
+                ].copy()
 
                 st.subheader("Recommended Charging Stops")
 
@@ -1850,7 +1886,8 @@ elif page == "Real Route Optimizer":
                             "state_clean",
                             "max_power_kw",
                             "reliability_score",
-                            "route_score"
+                            "route_score",
+                            "distance_to_route_km"
                         ]
                     ],
                     use_container_width=True
