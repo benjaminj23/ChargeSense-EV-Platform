@@ -1821,7 +1821,7 @@ elif page == "Real Route Optimizer":
             if battery_warning_triggered:
               st.warning(  "Battery may drop below the selected minimum arrival battery on one or more legs. " 
                          "Consider increasing starting battery, using a longer-range EV, reducing the safety buffer, "
-                         "or choosing a different charging strategy.)
+                         "or choosing a different charging strategy.")
             if len(sequence_stops) == 0:
 
                 st.success(
