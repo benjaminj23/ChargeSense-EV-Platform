@@ -66,7 +66,7 @@ ocm_df["reliability_score"] = (
     ocm_df["reliability_score"]
     .clip(lower=0, upper=100)
     .round(2)
-))
+)
 
 def reliability_label(score):
     if score >= 70:
