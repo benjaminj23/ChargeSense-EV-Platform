@@ -141,6 +141,7 @@ page = st.sidebar.radio(
         "Charger Trust Scorecard",
         "Demand Forecast Model",
         "Model Assumptions",
+        "Network Health Dashboard",
         "Project Insights",
     ],
 )
@@ -1567,6 +1568,103 @@ elif page == "Model Assumptions":
     - Add suburb/LGA-level population and EV registration data
     - Train models on historical failure and usage records
     """)
+
+elif page == "Network Health Dashboard":
+
+    st.title("🛰️ Network Health Dashboard")
+
+    st.markdown("""
+    Simulate real-time EV charging network health monitoring using reliability,
+    freshness, congestion, and availability indicators.
+    """)
+
+    health_df = ocm_df.copy()
+
+    health_df["health_score"] = (
+        health_df["reliability_score"].fillna(0) * 0.5
+        + (100 - health_df["days_since_verified"].fillna(365).clip(upper=365) / 365 * 100) * 0.3
+        + health_df["max_power_kw"].fillna(0).clip(upper=350) / 350 * 100 * 0.2
+    )
+
+    health_df["health_score"] = (
+        health_df["health_score"]
+        .clip(lower=0, upper=100)
+        .round(2)
+    )
+
+    def health_status(score):
+        if score >= 70:
+            return "Healthy"
+        elif score >= 40:
+            return "Degraded"
+        return "Critical"
+
+    health_df["health_status"] = (
+        health_df["health_score"]
+        .apply(health_status)
+    )
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    col1.metric(
+        "Total Stations",
+        len(health_df)
+    )
+
+    col2.metric(
+        "Healthy",
+        len(health_df[health_df["health_status"] == "Healthy"])
+    )
+
+    col3.metric(
+        "Degraded",
+        len(health_df[health_df["health_status"] == "Degraded"])
+    )
+
+    col4.metric(
+        "Critical",
+        len(health_df[health_df["health_status"] == "Critical"])
+    )
+
+    st.subheader("Network Health Status Distribution")
+
+    health_dist = (
+        health_df["health_status"]
+        .value_counts()
+        .reset_index()
+    )
+
+    health_dist.columns = ["Health Status", "Count"]
+
+    st.bar_chart(
+        health_dist.set_index("Health Status")
+    )
+
+    st.subheader("Critical Stations")
+
+    critical_df = (
+        health_df[
+            health_df["health_status"] == "Critical"
+        ]
+        .sort_values("health_score")
+    )
+
+    st.dataframe(
+        critical_df[
+            [
+                "station_name",
+                "town",
+                "state_clean",
+                "max_power_kw",
+                "reliability_score",
+                "days_since_verified",
+                "health_score",
+                "health_status"
+            ]
+        ]
+        .head(25),
+        use_container_width=True
+    )
 
 # -----------------------------
 # PROJECT INSIGHTS
