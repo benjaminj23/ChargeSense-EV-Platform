@@ -139,6 +139,7 @@ page = st.sidebar.radio(
         "Peak Surge Simulator",
         "Charging Type Mix",
         "Charger Trust Scorecard",
+        "Demand Forecast Model",
         "Project Insights",
     ],
 )
@@ -1378,6 +1379,145 @@ elif page == "Charger Trust Scorecard":
 
     st.bar_chart(
         trust_state_df.head(20).set_index("station_name")["trust_score"]
+    )
+
+elif page == "Demand Forecast Model":
+
+    st.title("📊 Demand Forecast Model")
+
+    st.markdown("""
+    Forecast future EV charging pressure using estimated EV fleet growth,
+    charging frequency assumptions, and current charging infrastructure.
+    
+    This is a scenario-based demand model, not a production-grade time-series model.
+    """)
+
+    current_ev_fleet = st.number_input(
+        "Estimated Current Australian EV Fleet",
+        min_value=100000,
+        max_value=2000000,
+        value=410000,
+        step=10000
+    )
+
+    annual_growth_rate = st.slider(
+        "Annual EV Fleet Growth Rate (%)",
+        5,
+        80,
+        30
+    )
+
+    forecast_years = st.slider(
+        "Forecast Horizon (Years)",
+        1,
+        5,
+        3
+    )
+
+    public_charges_per_ev_month = st.slider(
+        "Average Public Charges per EV per Month",
+        1,
+        20,
+        4
+    )
+
+    forecast_df = state_metrics.copy()
+    forecast_df = forecast_df.dropna(subset=["population"])
+
+    total_population = forecast_df["population"].sum()
+
+    forecast_df["population_share"] = (
+        forecast_df["population"] / total_population
+    )
+
+    forecast_df["estimated_current_evs"] = (
+        current_ev_fleet * forecast_df["population_share"]
+    )
+
+    forecast_df["forecast_evs"] = (
+        forecast_df["estimated_current_evs"]
+        * ((1 + annual_growth_rate / 100) ** forecast_years)
+    )
+
+    forecast_df["monthly_public_sessions"] = (
+        forecast_df["forecast_evs"]
+        * public_charges_per_ev_month
+    )
+
+    forecast_df["sessions_per_station_month"] = (
+        forecast_df["monthly_public_sessions"]
+        / forecast_df["total_stations"]
+    )
+
+    forecast_df["demand_pressure_index"] = (
+        forecast_df["sessions_per_station_month"]
+        / forecast_df["sessions_per_station_month"].max()
+        * 100
+    ).round(2)
+
+    def demand_label(score):
+        if score >= 70:
+            return "High Future Pressure"
+        elif score >= 40:
+            return "Moderate Future Pressure"
+        return "Lower Future Pressure"
+
+    forecast_df["demand_pressure_label"] = (
+        forecast_df["demand_pressure_index"]
+        .apply(demand_label)
+    )
+
+    forecast_df = forecast_df.sort_values(
+        "demand_pressure_index",
+        ascending=False
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "Forecast National EV Fleet",
+        f"{int(forecast_df['forecast_evs'].sum()):,}"
+    )
+
+    col2.metric(
+        "Highest Pressure State",
+        forecast_df.iloc[0]["state_clean"]
+    )
+
+    col3.metric(
+        "Highest Pressure Index",
+        round(forecast_df.iloc[0]["demand_pressure_index"], 1)
+    )
+
+    st.subheader("Forecast Demand Pressure by State")
+
+    st.dataframe(
+        forecast_df[
+            [
+                "state_clean",
+                "population",
+                "total_stations",
+                "estimated_current_evs",
+                "forecast_evs",
+                "monthly_public_sessions",
+                "sessions_per_station_month",
+                "demand_pressure_index",
+                "demand_pressure_label"
+            ]
+        ],
+        use_container_width=True
+    )
+
+    st.subheader("Demand Pressure Index")
+
+    st.bar_chart(
+        forecast_df.set_index("state_clean")["demand_pressure_index"]
+    )
+
+    st.subheader("Forecast EV Fleet by State")
+
+    st.bar_chart(
+        forecast_df.set_index("state_clean")["forecast_evs"]
     )
 
 # -----------------------------
