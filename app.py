@@ -1578,10 +1578,12 @@ elif page == "Real Route Optimizer":
             near_route_df = route_map_df[
                 route_map_df["distance_to_route_km"] <= route_buffer_km
             ].copy()
+            near_route_df["route_recommendation_score"] = (near_route_df["route_score"]   - (near_route_df["distance_to_route_km"] * 3)
+
 
             recommended_stops = (
                 near_route_df
-                .sort_values("route_score", ascending=False)
+                .sort_values("route_recommendation_score", ascending=False)
                 .head(30)
             )
 
@@ -1733,6 +1735,7 @@ elif page == "Real Route Optimizer":
                     "reliability_score": True,
                     "route_score": True,
                     "distance_to_route_km": True,
+                    "route_recommendation_score":True,
                     "latitude": False,
                     "longitude": False,
                     "plot_size": False
