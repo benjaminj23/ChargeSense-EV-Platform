@@ -1412,12 +1412,7 @@ elif page == "Real Route Optimizer":
     ev_range_km = ev_profiles[selected_ev]["range_km"]
     weather_range_multiplier = 1.0
 
-    if weather_mode == "Cold Weather":
-      weather_range_multiplier = 0.82
-    elif weather_mode == "Heavy Rain":
-      weather_range_multiplier = 0.88
-    elif weather_mode == "Extreme Heat":
-      weather_range_multiplier = 0.90
+
 
     adjusted_ev_range_km = (  ev_range_km * weather_range_multiplier)
 
@@ -1438,6 +1433,13 @@ elif page == "Real Route Optimizer":
         "Extreme Heat"
     ]
     )
+
+    if weather_mode == "Cold Weather":
+      weather_range_multiplier = 0.82
+    elif weather_mode == "Heavy Rain":
+      weather_range_multiplier = 0.88
+    elif weather_mode == "Extreme Heat":
+      weather_range_multiplier = 0.90
 
     if charging_strategy == "Conservative":
         dynamic_charge_to_percent = 80
