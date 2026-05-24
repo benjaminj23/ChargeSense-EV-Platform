@@ -1722,7 +1722,7 @@ elif page == "Real Route Optimizer":
 
                 if arrival_battery_percent < charge_from_percent:
                     battery_warning_triggered = True
-                    )
+                )
 
                 charge_needed_percent = max(
                     dynamic_charge_to_percent - arrival_battery_percent, 0
