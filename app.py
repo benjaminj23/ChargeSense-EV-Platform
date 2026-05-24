@@ -1705,6 +1705,7 @@ elif page == "Real Route Optimizer":
 
             current_battery_percent = starting_battery_percent
             previous_distance_km = 0
+            battery_warning_triggered = False
 
             for target_distance in route_stop_targets:
 
@@ -1720,10 +1721,7 @@ elif page == "Real Route Optimizer":
                 )
 
                 if arrival_battery_percent < charge_from_percent:
-                    st.warning(
-                        f"Battery may drop below the selected minimum arrival battery before stop "
-                        f"{len(sequence_stops) + 1}. Consider increasing starting battery, reducing safety buffer, "
-                        f"or choosing a longer-range EV."
+                    battery_warning_triggered = True
                     )
 
                 charge_needed_percent = max(
@@ -1820,7 +1818,10 @@ elif page == "Real Route Optimizer":
                         1
                     )
                 })
-
+            if battery_warning_triggered:
+              st.warning(  "Battery may drop below the selected minimum arrival battery on one or more legs. " 
+                         "Consider increasing starting battery, using a longer-range EV, reducing the safety buffer, "
+                         "or choosing a different charging strategy.)
             if len(sequence_stops) == 0:
 
                 st.success(
