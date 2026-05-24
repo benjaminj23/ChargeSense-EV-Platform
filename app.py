@@ -1349,16 +1349,16 @@ elif page == "Real Route Optimizer":
             "longitude": float(result["lon"]),
             "latitude": float(result["lat"])
         }
-  def simulated_availability(row):
-    reliability = row.get("reliability_score", 0)
+   def simulated_availability(row):
+     reliability = row.get("reliability_score", 0)
 
-    if reliability >= 70:
+     if reliability >= 70:
         return "Available"
-    elif reliability >= 40:
+     elif reliability >= 40:
         return "Busy"
-    elif reliability > 0:
+     elif reliability > 0:
         return "Unknown"
-    else:
+     else:
         return "Offline"
     route_input_mode = st.radio(
         "Route Input Mode",
