@@ -60,7 +60,7 @@ ocm_df["reliability_score"] = (
             / 365
         ) * 100
     ) * 0.45
-))
+)
 
 ocm_df["reliability_score"] = (
     ocm_df["reliability_score"]
