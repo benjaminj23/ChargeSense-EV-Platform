@@ -140,6 +140,7 @@ page = st.sidebar.radio(
         "Charging Type Mix",
         "Charger Trust Scorecard",
         "Demand Forecast Model",
+        "Model Assumptions",
         "Project Insights",
     ],
 )
@@ -1519,6 +1520,53 @@ elif page == "Demand Forecast Model":
     st.bar_chart(
         forecast_df.set_index("state_clean")["forecast_evs"]
     )
+
+elif page == "Model Assumptions":
+
+    st.title("📘 Model Assumptions")
+
+    st.markdown("""
+    ### Why this page matters
+
+    ChargeSense uses public EV infrastructure datasets and scenario-based models.
+    Some outputs are analytical estimates, not confirmed real-world measurements.
+
+    ### Key Assumptions
+
+    **1. Reliability Score**  
+    Based on recent verification, data quality, and days since last verified.
+
+    **2. Infrastructure Gap Score**  
+    Combines charger density, ultra-fast coverage, and average reliability.
+
+    **3. Congestion Risk Score**  
+    Uses charger power, reliability, and state-level infrastructure availability as proxy inputs.
+
+    **4. Demand Forecast Model**  
+    Uses estimated EV fleet growth, population share, public charging frequency, and current station count.
+
+    **5. Queue Simulation**  
+    Estimates wait time using arrivals per hour, connector count, and average charging session duration.
+
+    **6. Route Intelligence**  
+    Uses state-level route corridors, not exact road geometry. Full routing would require a routing API.
+
+    ### Current Limitations
+
+    - No live charger occupancy data
+    - No real-time outage feed
+    - No confirmed user charging-session history
+    - Some location metadata is incomplete or inconsistent
+    - Forecasting is scenario-based, not a trained time-series model
+
+    ### Future Improvements
+
+    - Add real charger utilization data
+    - Add routing API integration
+    - Add operator-level uptime data
+    - Add suburb/LGA-level population and EV registration data
+    - Train models on historical failure and usage records
+    """)
 
 # -----------------------------
 # PROJECT INSIGHTS
