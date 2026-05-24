@@ -163,8 +163,7 @@ state_metrics = state_metrics.merge(
 
 st.sidebar.title("⚡ ChargeSense")
 
-page = st.sidebar.radio(
-    "Navigate",
+
 page = st.sidebar.radio(
     "Navigate",
     [
@@ -183,7 +182,7 @@ page = st.sidebar.radio(
         "Model Assumptions",
         "Project Insights"
     ],
- )
+ 
 )
 
 # -----------------------------
