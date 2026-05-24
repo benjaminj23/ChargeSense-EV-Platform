@@ -165,24 +165,23 @@ st.sidebar.title("⚡ ChargeSense")
 
 page = st.sidebar.radio(
     "Navigate",
+page = st.sidebar.radio(
+    "Navigate",
     [
         "Home",
         "Infrastructure Overview",
-        "Infrastructure Gap Analysis",
         "Interactive Map",
+        "Infrastructure Gap Analysis",
         "Reliability Intelligence",
-        "Charger Recommendation",
         "Reliability Risk Model",
+        "Charger Recommendation",
+        "Real Route Optimizer",
+        "Demand Forecast Model",
         "Queue Simulation Engine",
         "Reservation Simulation",
-        "Congestion Risk Analysis",
-        "Dynamic Pricing Simulator",
         "Charging Cost Simulator",
-        "Availability Stress Test",
-        "Demand Forecast Model",
         "Model Assumptions",
-        "Real Route Optimizer",
-        "Project Insights",
+        "Project Insights"
     ],
 )
 
