@@ -1704,6 +1704,11 @@ elif page == "Real Route Optimizer":
 
     ors_api_key = st.secrets.get("ORS_API_KEY", None)
 
+    if ors_api_key is None:
+      st.error("OpenRouteService API key is missing.")
+      st.stop()
+
+    ors_api_key = str(ors_api_key).strip()
     cities = list(city_coordinates.keys())
 
     col1, col2 = st.columns(2)
