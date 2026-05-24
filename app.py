@@ -29,7 +29,20 @@ nsw_df, ocm_df = load_data()
 # -----------------------------------
 # DATA PREP
 # -----------------------------------
-
+state_population = {
+    "New South Wales": 8500000,
+    "Victoria": 6900000,
+    "Queensland": 5600000,
+    "Western Australia": 3000000,
+    "South Australia": 1900000,
+    "Tasmania": 575000,
+    "ACT": 470000,
+    "Northern Territory": 260000
+}
+ocm_df["population"] = (
+    ocm_df["state_clean"]
+    .map(state_population)
+)
 ocm_df["max_power_kw"] = pd.to_numeric(
     ocm_df["max_power_kw"],
     errors="coerce"
