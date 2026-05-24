@@ -150,6 +150,7 @@ page = st.sidebar.radio(
         "Route Intelligence",
         "Charging Type Mix",
         "Reliability Risk Model",
+        "Charging Cost Simulator",
         "Dynamic Pricing Simulator",
         "Infrastructure Investment Simulator",  
         "Project Insights"
@@ -1147,6 +1148,82 @@ elif page == "Reliability Risk Model":
     st.bar_chart(
         risk_dist.set_index("Risk Label")
     )
+
+elif page == "Charging Cost Simulator":
+
+    st.title("🔋 Charging Cost Simulator")
+
+    st.markdown("""
+    Estimate charging session cost based on battery size, charging need, and simulated electricity price.
+    """)
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        battery_size = st.slider(
+            "Battery Size (kWh)",
+            30,
+            120,
+            60
+        )
+
+    with col2:
+        current_battery = st.slider(
+            "Current Battery (%)",
+            0,
+            100,
+            20
+        )
+
+    with col3:
+        target_battery = st.slider(
+            "Target Battery (%)",
+            0,
+            100,
+            80
+        )
+
+    price_per_kwh = st.slider(
+        "Price per kWh ($)",
+        0.20,
+        1.20,
+        0.55,
+        0.05
+    )
+
+    charge_needed_percent = max(target_battery - current_battery, 0)
+
+    energy_needed_kwh = (
+        battery_size
+        * charge_needed_percent
+        / 100
+    )
+
+    estimated_cost = energy_needed_kwh * price_per_kwh
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "Energy Needed",
+        f"{round(energy_needed_kwh, 1)} kWh"
+    )
+
+    col2.metric(
+        "Estimated Cost",
+        f"${round(estimated_cost, 2)}"
+    )
+
+    col3.metric(
+        "Charge Increase",
+        f"{charge_needed_percent}%"
+    )
+
+    if target_battery <= current_battery:
+        st.warning("Target battery must be higher than current battery to estimate charging cost.")
+    else:
+        st.success(
+            f"Estimated cost to charge from {current_battery}% to {target_battery}% is ${round(estimated_cost, 2)}."
+        )
 
 elif page == "Dynamic Pricing Simulator":
 
