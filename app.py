@@ -727,6 +727,7 @@ elif page == "Infrastructure Gap Analysis":
     st.bar_chart(
         gap_view.set_index("state_clean")["chargers_per_million"]
     )
+    
 elif page == "Future Pressure Forecast":
 
     st.title("📈 Future Pressure Forecast")
@@ -744,24 +745,26 @@ elif page == "Future Pressure Forecast":
     )
 
     forecast_df = state_metrics.copy()
+    forecast_df = forecast_df.dropna(subset=["population"])
 
-    forecast_df["future_demand_index"] = (
+    forecast_df["base_pressure"] = (
         forecast_df["population"]
-        * (1 + demand_growth / 100)
-    )
-
-    forecast_df["future_pressure_score"] = (
-        forecast_df["future_demand_index"]
         / (
             forecast_df["total_stations"]
             * forecast_df["avg_power_kw"].fillna(1)
         )
     )
 
+    forecast_df["growth_multiplier"] = 1 + (demand_growth / 100)
+
     forecast_df["future_pressure_score"] = (
+        forecast_df["base_pressure"]
+        * forecast_df["growth_multiplier"]
+    ).round(2)
+
+    forecast_df["additional_pressure"] = (
         forecast_df["future_pressure_score"]
-        / forecast_df["future_pressure_score"].max()
-        * 100
+        - forecast_df["base_pressure"]
     ).round(2)
 
     forecast_df = forecast_df.sort_values(
@@ -779,7 +782,9 @@ elif page == "Future Pressure Forecast":
                 "total_stations",
                 "avg_power_kw",
                 "chargers_per_million",
-                "future_pressure_score"
+                "base_pressure",
+                "future_pressure_score",
+                "additional_pressure"
             ]
         ],
         use_container_width=True
@@ -789,6 +794,12 @@ elif page == "Future Pressure Forecast":
 
     st.bar_chart(
         forecast_df.set_index("state_clean")["future_pressure_score"]
+    )
+
+    st.subheader("Additional Pressure from Growth Scenario")
+
+    st.bar_chart(
+        forecast_df.set_index("state_clean")["additional_pressure"]
     )
 # -----------------------------------
 # PROJECT INSIGHTS
