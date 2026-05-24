@@ -2001,20 +2001,42 @@ elif page == "Real Route Optimizer":
                     use_container_width=True
                 )
             st.subheader("Trip Plan Summary")
+
+            if len(sequence_stops) > 0:
+                charging_stops_count = len(sequence_df)
+                charging_time_summary = round(total_charging_time_min, 1)
+                total_trip_time_summary = round(total_trip_time_hours, 1)
+                charging_cost_summary = round(total_charging_cost_aud, 2)
+                cost_per_100km_summary = round(cost_per_100km, 2)
+            else:
+                charging_stops_count = 0
+                charging_time_summary = 0
+                total_trip_time_summary = round(duration_hours, 1)
+                charging_cost_summary = 0
+                cost_per_100km_summary = 0
+
             trip_summary = f"""
-            Route: {start_label} → {destination_label}
-            EV: {selected_ev}
-            Distance: {round(distance_km, 1)} km
-            Drive Time: {round(duration_hours, 1)} hrs
-            Charging Stops: {len(sequence_df)}
-            Total Charging Time: {round(total_charging_time_min, 1)} min
-            Estimated Total Trip Time: {round(total_trip_time_hours, 1)} hrs
-            Strategy: {charging_strategy}
-            """
+           Route: {start_label} → {destination_label}
+           EV: {selected_ev}
+           Distance: {round(distance_km, 1)} km
+           Drive Time: {round(duration_hours, 1)} hrs
+           Charging Stops: {charging_stops_count}
+           Total Charging Time: {charging_time_summary} min
+           Estimated Charging Cost: ${charging_cost_summary}
+           Estimated Cost per 100 km: ${cost_per_100km_summary}
+           Estimated Total Trip Time: {total_trip_time_summary} hrs
+           Strategy: {charging_strategy}
+           Weather: {weather_mode}
+           Charging Price Used: ${electricity_price_per_kwh}/kWh
+           """
+
             st.code(trip_summary)
 
-            st.download_button( "Download Trip Plan", trip_summary, file_name="chargesense_trip_plan.txt")
-
+            st.download_button(
+                "Download Trip Plan",
+                trip_summary,
+                file_name="chargesense_trip_plan.txt"
+            )
             st.subheader("Route Map with Recommended Chargers")
 
             recommended_stops["plot_size"] = (
