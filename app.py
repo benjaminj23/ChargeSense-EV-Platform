@@ -155,6 +155,7 @@ page = st.sidebar.radio(
         "Infrastructure Investment Simulator",  
         "Availability Stress Test",
         "EV Adoption Impact",
+        "Charger Desert Detector",
         "Project Insights"
     ]
 )
@@ -1526,6 +1527,82 @@ elif page == "EV Adoption Impact":
         st.warning("Moderate pressure: infrastructure expansion may be needed.")
     else:
         st.success("Lower pressure: current infrastructure appears more manageable under this scenario.")
+
+elif page == "Charger Desert Detector":
+
+    st.title("🏜️ Charger Desert Detector")
+
+    st.markdown("""
+    Identify regions that may be underserved by EV charging infrastructure.
+    This version uses charger density, ultra-fast coverage, and reliability as proxy indicators.
+    """)
+
+    desert_df = state_metrics.copy()
+    desert_df = desert_df.dropna(subset=["population"])
+
+    desert_df["desert_score"] = (
+        (100 - desert_df["chargers_per_million"].clip(upper=100)) * 0.5
+        + (1 - desert_df["ultra_fast_ratio"]) * 100 * 0.3
+        + (100 - desert_df["avg_reliability"]) * 0.2
+    )
+
+    desert_df["desert_score"] = (
+        desert_df["desert_score"]
+        .clip(lower=0, upper=100)
+        .round(2)
+    )
+
+    def desert_label(score):
+        if score >= 70:
+            return "High Undersupply"
+        elif score >= 40:
+            return "Moderate Undersupply"
+        return "Lower Undersupply"
+
+    desert_df["desert_label"] = desert_df["desert_score"].apply(desert_label)
+
+    desert_df = desert_df.sort_values("desert_score", ascending=False)
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "Highest Desert Risk",
+        desert_df.iloc[0]["state_clean"]
+    )
+
+    col2.metric(
+        "Desert Score",
+        round(desert_df.iloc[0]["desert_score"], 1)
+    )
+
+    col3.metric(
+        "Chargers / Million",
+        round(desert_df.iloc[0]["chargers_per_million"], 1)
+    )
+
+    st.subheader("Charger Desert Ranking")
+
+    st.dataframe(
+        desert_df[
+            [
+                "state_clean",
+                "population",
+                "total_stations",
+                "chargers_per_million",
+                "ultra_fast_ratio",
+                "avg_reliability",
+                "desert_score",
+                "desert_label"
+            ]
+        ],
+        use_container_width=True
+    )
+
+    st.subheader("Charger Desert Score by State")
+
+    st.bar_chart(
+        desert_df.set_index("state_clean")["desert_score"]
+    )
 
 # -----------------------------------
 # PROJECT INSIGHTS
