@@ -1419,7 +1419,7 @@ elif page == "Real Route Optimizer":
     elif weather_mode == "Extreme Heat":
       weather_range_multiplier = 0.90
 
-     adjusted_ev_range_km = (  ev_range_km * weather_range_multiplier)
+    adjusted_ev_range_km = (  ev_range_km * weather_range_multiplier)
 
     st.info(
         f"{selected_ev}: {battery_kwh} kWh battery, approx. {ev_range_km} km driving range."
