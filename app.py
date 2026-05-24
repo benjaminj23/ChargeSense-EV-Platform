@@ -255,6 +255,7 @@ elif page == "Infrastructure Gap Analysis":
                 "ultra_fast_sites",
                 "ultra_fast_ratio",
                 "avg_reliability",
+                "Queue Simulation Engine",
                 "infrastructure_gap_score"
             ]
         ]
@@ -486,6 +487,130 @@ elif page == "Charger Recommendation":
             ].head(15),
             use_container_width=True
         )
+
+elif page == "Queue Simulation Engine":
+
+    st.title("⏳ Queue Simulation Engine")
+
+    st.markdown("""
+    Simulate estimated waiting time at EV charging stations based on charger capacity,
+    arrival demand, and average charging duration.
+    """)
+
+    queue_df = ocm_df.copy()
+
+    queue_df["total_connector_quantity"] = pd.to_numeric(
+        queue_df["total_connector_quantity"],
+        errors="coerce"
+    ).fillna(1)
+
+    queue_df["max_power_kw"] = pd.to_numeric(
+        queue_df["max_power_kw"],
+        errors="coerce"
+    ).fillna(0)
+
+    selected_queue_state = st.selectbox(
+        "Select State",
+        sorted(queue_df["state_clean"].dropna().unique()),
+        key="queue_state"
+    )
+
+    arrivals_per_hour = st.slider(
+        "Estimated EV Arrivals per Hour",
+        1,
+        100,
+        20
+    )
+
+    avg_charge_minutes = st.slider(
+        "Average Charging Session Duration",
+        10,
+        90,
+        30
+    )
+
+    queue_state_df = queue_df[
+        queue_df["state_clean"] == selected_queue_state
+    ].copy()
+
+    queue_state_df["hourly_capacity"] = (
+        queue_state_df["total_connector_quantity"]
+        * (60 / avg_charge_minutes)
+    )
+
+    queue_state_df["queue_pressure_ratio"] = (
+        arrivals_per_hour
+        / queue_state_df["hourly_capacity"].replace(0, 1)
+    )
+
+    queue_state_df["estimated_wait_minutes"] = (
+        (queue_state_df["queue_pressure_ratio"] - 1)
+        .clip(lower=0)
+        * avg_charge_minutes
+    ).round(1)
+
+    def wait_label(wait):
+        if wait >= 30:
+            return "High Wait"
+        elif wait >= 10:
+            return "Moderate Wait"
+        return "Low Wait"
+
+    queue_state_df["wait_label"] = (
+        queue_state_df["estimated_wait_minutes"]
+        .apply(wait_label)
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "Stations Simulated",
+        len(queue_state_df)
+    )
+
+    col2.metric(
+        "Avg Estimated Wait",
+        round(queue_state_df["estimated_wait_minutes"].mean(), 1)
+    )
+
+    col3.metric(
+        "High Wait Stations",
+        len(queue_state_df[queue_state_df["wait_label"] == "High Wait"])
+    )
+
+    st.subheader("Estimated Wait Times by Station")
+
+    st.dataframe(
+        queue_state_df[
+            [
+                "station_name",
+                "town",
+                "state_clean",
+                "total_connector_quantity",
+                "max_power_kw",
+                "hourly_capacity",
+                "estimated_wait_minutes",
+                "wait_label"
+            ]
+        ]
+        .sort_values("estimated_wait_minutes", ascending=False)
+        .head(25),
+        use_container_width=True
+    )
+
+    st.subheader("Wait Time Distribution")
+
+    wait_dist = (
+        queue_state_df["wait_label"]
+        .value_counts()
+        .reset_index()
+    )
+
+    wait_dist.columns = ["Wait Category", "Count"]
+
+    st.bar_chart(
+        wait_dist.set_index("Wait Category")
+    )
 
 # -----------------------------------
 # RESERVATION SIMULATION
