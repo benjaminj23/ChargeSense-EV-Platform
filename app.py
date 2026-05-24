@@ -802,6 +802,150 @@ elif page == "Future Pressure Forecast":
     st.bar_chart(
         forecast_df.set_index("state_clean")["additional_pressure"]
     )
+elif page == "Route Intelligence":
+
+    st.title("🛣️ Route Intelligence")
+
+    st.markdown("""
+    Select a start city and destination city to find recommended EV charging stops.
+    This prototype recommends chargers based on route-relevant states, charger power, and reliability.
+    """)
+
+    city_state_map = {
+        "Sydney": "New South Wales",
+        "Melbourne": "Victoria",
+        "Brisbane": "Queensland",
+        "Canberra": "ACT",
+        "Adelaide": "South Australia",
+        "Perth": "Western Australia",
+        "Hobart": "Tasmania",
+        "Darwin": "Northern Territory",
+        "Gold Coast": "Queensland",
+        "Newcastle": "New South Wales",
+        "Wollongong": "New South Wales",
+        "Geelong": "Victoria"
+    }
+
+    cities = sorted(city_state_map.keys())
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        start_city = st.selectbox(
+            "Start City",
+            cities,
+            index=cities.index("Sydney")
+        )
+
+    with col2:
+        destination_city = st.selectbox(
+            "Destination City",
+            cities,
+            index=cities.index("Melbourne")
+        )
+
+    start_state = city_state_map[start_city]
+    destination_state = city_state_map[destination_city]
+
+    route_states = list(set([start_state, destination_state]))
+
+    st.info(
+        f"Route corridor: {start_city} ({start_state}) → {destination_city} ({destination_state})"
+    )
+
+    route_df = ocm_df[
+        ocm_df["state_clean"].isin(route_states)
+    ].copy()
+
+    route_df["route_score"] = (
+        route_df["max_power_kw"].fillna(0) * 0.6
+        + route_df["reliability_score"].fillna(0) * 0.4
+    )
+
+    route_df = route_df.sort_values(
+        "route_score",
+        ascending=False
+    )
+
+    st.metric(
+        "Recommended Stops Found",
+        len(route_df)
+    )
+
+    st.subheader("Top Recommended Charging Stops")
+
+    if len(route_df) == 0:
+        st.warning("No charging stops found for this city pair.")
+    else:
+        st.dataframe(
+            route_df[
+                [
+                    "station_name",
+                    "town",
+                    "state_clean",
+                    "max_power_kw",
+                    "reliability_score",
+                    "reliability_label",
+                    "route_score"
+                ]
+            ].head(20),
+            use_container_width=True
+        )
+
+    st.subheader("Route Charging Map")
+
+    map_route_df = route_df.copy()
+
+    map_route_df["latitude"] = pd.to_numeric(
+        map_route_df["latitude"],
+        errors="coerce"
+    )
+
+    map_route_df["longitude"] = pd.to_numeric(
+        map_route_df["longitude"],
+        errors="coerce"
+    )
+
+    map_route_df = map_route_df.dropna(
+        subset=["latitude", "longitude"]
+    )
+
+    map_route_df["plot_size"] = (
+        map_route_df["max_power_kw"]
+        .fillna(1)
+        .clip(lower=5, upper=350)
+    )
+
+    if len(map_route_df) == 0:
+        st.warning("No mappable charging stops found for this route.")
+    else:
+        fig = px.scatter_mapbox(
+            map_route_df.head(150),
+            lat="latitude",
+            lon="longitude",
+            hover_name="station_name",
+            hover_data={
+                "town": True,
+                "state_clean": True,
+                "max_power_kw": True,
+                "reliability_score": True,
+                "route_score": True,
+                "latitude": False,
+                "longitude": False,
+                "plot_size": False
+            },
+            color="route_score",
+            size="plot_size",
+            zoom=4,
+            height=650
+        )
+
+        fig.update_layout(
+            mapbox_style="open-street-map",
+            margin={"r": 0, "t": 0, "l": 0, "b": 0}
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
 # -----------------------------------
 # PROJECT INSIGHTS
 # -----------------------------------
