@@ -162,6 +162,7 @@ page = st.sidebar.radio(
         "Congestion Risk Analysis",
         "Charging Type Mix",
         "Infrastructure Gap Analysis",
+        "Future Pressure Forecast",
         "Project Insights"
     ]
 )
@@ -725,6 +726,69 @@ elif page == "Infrastructure Gap Analysis":
 
     st.bar_chart(
         gap_view.set_index("state_clean")["chargers_per_million"]
+    )
+elif page == "Future Pressure Forecast":
+
+    st.title("📈 Future Pressure Forecast")
+
+    st.markdown("""
+    Simulate how future EV adoption growth could increase pressure on charging infrastructure.
+    This is a scenario-based forecast, not a live demand prediction model.
+    """)
+
+    demand_growth = st.slider(
+        "Projected EV Demand Growth (%)",
+        0,
+        200,
+        50
+    )
+
+    forecast_df = state_metrics.copy()
+
+    forecast_df["future_demand_index"] = (
+        forecast_df["population"]
+        * (1 + demand_growth / 100)
+    )
+
+    forecast_df["future_pressure_score"] = (
+        forecast_df["future_demand_index"]
+        / (
+            forecast_df["total_stations"]
+            * forecast_df["avg_power_kw"].fillna(1)
+        )
+    )
+
+    forecast_df["future_pressure_score"] = (
+        forecast_df["future_pressure_score"]
+        / forecast_df["future_pressure_score"].max()
+        * 100
+    ).round(2)
+
+    forecast_df = forecast_df.sort_values(
+        "future_pressure_score",
+        ascending=False
+    )
+
+    st.subheader("Future Charging Pressure by State")
+
+    st.dataframe(
+        forecast_df[
+            [
+                "state_clean",
+                "population",
+                "total_stations",
+                "avg_power_kw",
+                "chargers_per_million",
+                "future_pressure_score"
+            ]
+        ],
+        use_container_width=True
+    )
+
+    st.subheader("Forecasted Future Pressure Score")
+
+    st.bar_chart(
+        forecast_df.set_index("state_clean")["future_pressure_score"]
     )
 # -----------------------------------
 # PROJECT INSIGHTS
