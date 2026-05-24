@@ -43,6 +43,55 @@ ocm_df["population"] = (
     ocm_df["state_clean"]
     .map(state_population)
 )
+state_metrics = (
+    ocm_df.groupby("state_clean")
+    .agg(
+        total_stations=("station_name", "count"),
+        avg_power_kw=("max_power_kw", "mean"),
+        avg_reliability=("reliability_score", "mean"),
+        ultra_fast_sites=(
+            "speed_category",
+            lambda x: (x == "Ultra-fast DC").sum()
+        ),
+        population=("population", "first")
+    )
+    .reset_index()
+)
+
+state_metrics["chargers_per_million"] = (
+    state_metrics["total_stations"]
+    / state_metrics["population"]
+) * 1_000_000
+
+state_metrics["ultra_fast_ratio"] = (
+    state_metrics["ultra_fast_sites"]
+    / state_metrics["total_stations"]
+)
+
+state_metrics["infrastructure_gap_score"] = (
+    (
+        100
+        - state_metrics["chargers_per_million"]
+        .clip(upper=100)
+    ) * 0.4
+    +
+    (
+        100
+        - state_metrics["avg_reliability"]
+    ) * 0.3
+    +
+    (
+        1
+        - state_metrics["ultra_fast_ratio"]
+    ) * 100 * 0.3
+)
+
+state_metrics["infrastructure_gap_score"] = (
+    state_metrics["infrastructure_gap_score"]
+    .clip(lower=0, upper=100)
+    .round(2)
+)
+
 ocm_df["max_power_kw"] = pd.to_numeric(
     ocm_df["max_power_kw"],
     errors="coerce"
