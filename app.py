@@ -1734,13 +1734,12 @@ elif page == "Real Route Optimizer":
 
         with st.spinner("Calculating route..."):
 
-            url = (
-                "https://api.heidelberg.org/v2/directions/driving-car/geojson"
-            )
+            url = https://api.openrouteservice.org/v2/directions/driving-car/geojson
 
             headers = {
                 "Authorization": ors_api_key,
-                "Content-Type": "application/json"
+                Accept": "application/json, application/geo+json",
+                "Content-Type": "application/json; charset=utf-8"
             }
 
             body = {
@@ -1753,8 +1752,13 @@ elif page == "Real Route Optimizer":
             response = requests.post(
                 url,
                 json=body,
-                headers=headers
+                headers=headers,
+                timeout=30
             )
+            except requests.exceptions.RequestException as e:
+             st.error("Could not connect to OpenRouteService.")
+             st.write(str(e))
+             st.stop()
 
             if response.status_code != 200:
                 st.error(f"ORS Error {response.status_code}")
