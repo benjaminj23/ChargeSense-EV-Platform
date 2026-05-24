@@ -154,6 +154,7 @@ page = st.sidebar.radio(
         "Dynamic Pricing Simulator",
         "Infrastructure Investment Simulator",  
         "Availability Stress Test",
+        "EV Adoption Impact",
         "Project Insights"
     ]
 )
@@ -1453,6 +1454,78 @@ elif page == "Availability Stress Test":
         use_container_width=True
     )
 
+elif page == "EV Adoption Impact":
+
+    st.title("🚗 EV Adoption Impact Simulator")
+
+    st.markdown("""
+    Simulate how rising EV adoption could affect charger demand pressure by state.
+    This connects infrastructure supply with future user demand.
+    """)
+
+    selected_adoption_state = st.selectbox(
+        "Select State",
+        sorted(state_metrics["state_clean"].dropna().unique()),
+        key="adoption_state"
+    )
+
+    ev_adoption_rate = st.slider(
+        "Estimated EV Adoption Rate (% of population)",
+        1,
+        30,
+        5
+    )
+
+    avg_charges_per_ev_month = st.slider(
+        "Average Public Charges per EV per Month",
+        1,
+        20,
+        4
+    )
+
+    adoption_row = state_metrics[
+        state_metrics["state_clean"] == selected_adoption_state
+    ].iloc[0]
+
+    estimated_evs = (
+        adoption_row["population"]
+        * ev_adoption_rate
+        / 100
+    )
+
+    monthly_public_charging_sessions = (
+        estimated_evs
+        * avg_charges_per_ev_month
+    )
+
+    sessions_per_station_month = (
+        monthly_public_charging_sessions
+        / adoption_row["total_stations"]
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "Estimated EVs",
+        f"{int(estimated_evs):,}"
+    )
+
+    col2.metric(
+        "Monthly Public Charging Sessions",
+        f"{int(monthly_public_charging_sessions):,}"
+    )
+
+    col3.metric(
+        "Sessions per Station / Month",
+        f"{round(sessions_per_station_month, 1)}"
+    )
+
+    if sessions_per_station_month > 1000:
+        st.error("High pressure: current charging infrastructure may struggle under this adoption scenario.")
+    elif sessions_per_station_month > 500:
+        st.warning("Moderate pressure: infrastructure expansion may be needed.")
+    else:
+        st.success("Lower pressure: current infrastructure appears more manageable under this scenario.")
 
 # -----------------------------------
 # PROJECT INSIGHTS
