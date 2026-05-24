@@ -1262,7 +1262,6 @@ elif page == "Model Assumptions":
     - Add suburb/LGA-level population and EV registration data
     - Train models on historical failure and usage records
     """)
-
 elif page == "Real Route Optimizer":
 
     st.title("🛰️ Real Route Optimizer")
@@ -1377,6 +1376,68 @@ elif page == "Real Route Optimizer":
         else:
             return "Offline"
 
+    def calculate_amenity_score(row):
+        text = " ".join(
+            [
+                str(row.get("station_name", "")),
+                str(row.get("address", "")),
+                str(row.get("town", ""))
+            ]
+        ).lower()
+
+        high_amenity_keywords = [
+            "service centre",
+            "service center",
+            "shopping centre",
+            "shopping center",
+            "7-eleven",
+            "7 eleven",
+            "woolworths",
+            "coles",
+            "mcdonald",
+            "kfc",
+            "hungry jack",
+            "ampol",
+            "bp",
+            "shell",
+            "caltex",
+            "airport"
+        ]
+
+        medium_amenity_keywords = [
+            "car park",
+            "parking",
+            "hotel",
+            "motel",
+            "club",
+            "cafe",
+            "restaurant",
+            "mall",
+            "plaza",
+            "visitor centre",
+            "visitor center"
+        ]
+
+        score = 0
+
+        for keyword in high_amenity_keywords:
+            if keyword in text:
+                score += 30
+
+        for keyword in medium_amenity_keywords:
+            if keyword in text:
+                score += 15
+
+        return min(score, 100)
+
+    def amenity_label(score):
+        if score >= 60:
+            return "High Amenity Stop"
+        elif score >= 30:
+            return "Medium Amenity Stop"
+        else:
+            return "Basic Stop"
+
     route_input_mode = st.radio(
         "Route Input Mode",
         ["Major City", "Custom Place"],
@@ -1474,9 +1535,7 @@ elif page == "Real Route Optimizer":
     elif weather_mode == "Extreme Heat":
         weather_range_multiplier = 0.90
 
-    adjusted_ev_range_km = (
-        ev_range_km * weather_range_multiplier
-    )
+    adjusted_ev_range_km = ev_range_km * weather_range_multiplier
 
     col1, col2 = st.columns(2)
 
@@ -1686,6 +1745,14 @@ elif page == "Real Route Optimizer":
                 route_map_df["availability_status"].map(availability_weight)
             )
 
+            route_map_df["amenity_score"] = (
+                route_map_df.apply(calculate_amenity_score, axis=1)
+            )
+
+            route_map_df["amenity_label"] = (
+                route_map_df["amenity_score"].apply(amenity_label)
+            )
+
             sampled_route = route_df.iloc[
                 ::max(1, len(route_df) // 100)
             ].copy()
@@ -1715,6 +1782,7 @@ elif page == "Real Route Optimizer":
             near_route_df["route_recommendation_score"] = (
                 near_route_df["route_score"].fillna(0)
                 + near_route_df["availability_score"].fillna(0)
+                + (near_route_df["amenity_score"].fillna(0) * 0.5)
                 - (near_route_df["distance_to_route_km"] * 10)
             )
 
@@ -1842,6 +1910,8 @@ elif page == "Real Route Optimizer":
                         "reliability_score",
                         "availability_status",
                         "availability_score",
+                        "amenity_label",
+                        "amenity_score",
                         "route_score",
                         "route_recommendation_score",
                         "distance_to_route_km"
@@ -2005,6 +2075,8 @@ elif page == "Real Route Optimizer":
                     "reliability_score": best_stop["reliability_score"],
                     "availability_status": best_stop["availability_status"],
                     "availability_score": best_stop["availability_score"],
+                    "amenity_label": best_stop["amenity_label"],
+                    "amenity_score": best_stop["amenity_score"],
                     "route_score": best_stop["route_score"],
                     "arrival_battery_%": round(arrival_battery_percent, 1),
                     "departure_battery_%": round(departure_battery_percent, 1),
@@ -2157,6 +2229,8 @@ Corridor Risk Score: {corridor_risk_score}
                     "reliability_score": True,
                     "availability_status": True,
                     "availability_score": True,
+                    "amenity_label": True,
+                    "amenity_score": True,
                     "route_score": True,
                     "route_recommendation_score": True,
                     "distance_to_route_km": True,
@@ -2196,8 +2270,6 @@ Corridor Risk Score: {corridor_risk_score}
                 fig,
                 use_container_width=True
             )
-
-
 
 # -----------------------------
 # PROJECT INSIGHTS
