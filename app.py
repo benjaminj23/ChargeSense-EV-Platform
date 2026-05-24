@@ -1907,7 +1907,11 @@ elif page == "Real Route Optimizer":
                 },
                 color="route_recommendation_score",
                 size="plot_size",
-                zoom=4,
+                center={
+                "lat": route_df["latitude"].mean(),
+                "lon": route_df["longitude"].mean()
+                },
+                zoom=6,
                 height=700
             )
 
