@@ -1688,7 +1688,7 @@ elif page == "Real Route Optimizer":
 
             usable_start_range_km = ev_range_km * (starting_battery_percent / 100)
 
-            usable_after_charge_range_km = ev_range_km * ((charge_to_percent - charge_from_percent) / 100)
+            usable_after_charge_range_km = ev_range_km * ((dynamic_charge_to_percent - charge_from_percent) / 100)
 
             safe_start_range_km = max(usable_start_range_km - safety_buffer_km, 1)
 
