@@ -1755,10 +1755,10 @@ elif page == "Real Route Optimizer":
                 headers=headers,
                 timeout=30
             )
-            except requests.exceptions.RequestException as e:
-             st.error("Could not connect to OpenRouteService.")
-             st.write(str(e))
-             st.stop()
+             except requests.exceptions.RequestException as e:
+              st.error("Could not connect to OpenRouteService.")
+              st.write(str(e))
+              st.stop()
 
             if response.status_code != 200:
                 st.error(f"ORS Error {response.status_code}")
