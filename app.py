@@ -1702,7 +1702,7 @@ elif page == "Real Route Optimizer":
     and identify high-quality EV charging stations near the route.
     """)
 
-    ors_api_key = st.secrets["ORS_API_KEY"]
+    ors_api_key = st.secrets.get("ORS_API_KEY", None)
 
     cities = list(city_coordinates.keys())
 
