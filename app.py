@@ -1410,6 +1410,16 @@ elif page == "Real Route Optimizer":
 
     battery_kwh = ev_profiles[selected_ev]["battery_kwh"]
     ev_range_km = ev_profiles[selected_ev]["range_km"]
+    weather_range_multiplier = 1.0
+
+    if weather_mode == "Cold Weather":
+      weather_range_multiplier = 0.82
+    elif weather_mode == "Heavy Rain":
+      weather_range_multiplier = 0.88
+    elif weather_mode == "Extreme Heat":
+      weather_range_multiplier = 0.90
+
+     adjusted_ev_range_km = (  ev_range_km * weather_range_multiplier)
 
     st.info(
         f"{selected_ev}: {battery_kwh} kWh battery, approx. {ev_range_km} km driving range."
@@ -1418,6 +1428,15 @@ elif page == "Real Route Optimizer":
     charging_strategy = st.selectbox(
         "Charging Strategy",
         ["Conservative", "Fastest Trip", "Fewest Stops"]
+    )
+    weather_mode = st.selectbox(
+    "Weather Conditions",
+    [
+        "Normal",
+        "Cold Weather",
+        "Heavy Rain",
+        "Extreme Heat"
+    ]
     )
 
     if charging_strategy == "Conservative":
