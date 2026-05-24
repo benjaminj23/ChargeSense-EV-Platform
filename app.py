@@ -1248,7 +1248,6 @@ elif page == "Model Assumptions":
     - Train models on historical failure and usage records
     """)
 
-
 elif page == "Real Route Optimizer":
 
     st.title("🛰️ Real Route Optimizer")
@@ -1440,24 +1439,36 @@ elif page == "Real Route Optimizer":
             50
         )
 
-    charge_from_percent = st.slider(
-        "Estimated Arrival Battery at Charging Stop (%)",
-        5,
-        50,
-        20
-    )
+    col1, col2, col3 = st.columns(3)
 
-    charge_to_percent = st.slider(
-        "Target Battery After Charging (%)",
-        50,
-        100,
-        80
-    )
+    with col1:
+        starting_battery_percent = st.slider(
+            "Starting Battery (%)",
+            20,
+            100,
+            90
+        )
+
+    with col2:
+        charge_from_percent = st.slider(
+            "Minimum Arrival Battery at Stop (%)",
+            5,
+            50,
+            20
+        )
+
+    with col3:
+        charge_to_percent = st.slider(
+            "Target Battery After Charging (%)",
+            50,
+            100,
+            80
+        )
 
     if st.button("Generate Real Route"):
 
         if charge_to_percent <= charge_from_percent:
-            st.warning("Target battery must be higher than arrival battery.")
+            st.warning("Target battery must be higher than minimum arrival battery.")
             st.stop()
 
         if route_input_mode == "Major City":
@@ -1680,16 +1691,42 @@ elif page == "Real Route Optimizer":
                 if (i + 1) * stop_interval_km < distance_km
             ]
 
-            energy_needed_kwh = (
-                battery_kwh
-                * (charge_to_percent - charge_from_percent)
-                / 100
-            )
-
             sequence_stops = []
             used_station_names = set()
 
+            current_battery_percent = starting_battery_percent
+            previous_distance_km = 0
+
             for target_distance in route_stop_targets:
+
+                leg_distance_km = target_distance - previous_distance_km
+
+                battery_used_percent = (
+                    leg_distance_km / ev_range_km
+                ) * 100
+
+                arrival_battery_percent = max(
+                    current_battery_percent - battery_used_percent,
+                    0
+                )
+
+                if arrival_battery_percent < charge_from_percent:
+                    st.warning(
+                        f"Battery may drop below the selected minimum arrival battery before stop "
+                        f"{len(sequence_stops) + 1}. Consider increasing starting battery, reducing safety buffer, "
+                        f"or choosing a longer-range EV."
+                    )
+
+                charge_needed_percent = max(
+                    charge_to_percent - arrival_battery_percent,
+                    0
+                )
+
+                energy_needed_kwh = (
+                    battery_kwh
+                    * charge_needed_percent
+                    / 100
+                )
 
                 target_ratio = target_distance / distance_km
 
@@ -1750,6 +1787,14 @@ elif page == "Real Route Optimizer":
                     energy_needed_kwh / charger_power_kw
                 ) * 60
 
+                departure_battery_percent = min(
+                    arrival_battery_percent + charge_needed_percent,
+                    100
+                )
+
+                current_battery_percent = departure_battery_percent
+                previous_distance_km = target_distance
+
                 sequence_stops.append({
                     "stop_number": len(sequence_stops) + 1,
                     "target_distance_km": round(target_distance, 1),
@@ -1759,16 +1804,12 @@ elif page == "Real Route Optimizer":
                     "max_power_kw": best_stop["max_power_kw"],
                     "reliability_score": best_stop["reliability_score"],
                     "route_score": best_stop["route_score"],
+                    "arrival_battery_%": round(arrival_battery_percent, 1),
+                    "departure_battery_%": round(departure_battery_percent, 1),
+                    "estimated_charge_kwh": round(energy_needed_kwh, 1),
+                    "estimated_charge_time_min": round(estimated_charge_time_min, 1),
                     "distance_to_target_km": round(
                         best_stop["distance_to_target_km"],
-                        1
-                    ),
-                    "estimated_charge_kwh": round(
-                        energy_needed_kwh,
-                        1
-                    ),
-                    "estimated_charge_time_min": round(
-                        estimated_charge_time_min,
                         1
                     )
                 })
