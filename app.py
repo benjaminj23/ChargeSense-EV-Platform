@@ -18,7 +18,6 @@ def load_data():
 nsw_df, ocm_df, ev_market_df = load_data()
 
 
-nsw_df, ocm_df = load_data()
 
 # -----------------------------
 # DATA PREP
