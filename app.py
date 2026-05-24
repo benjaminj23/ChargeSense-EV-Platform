@@ -1701,6 +1701,10 @@ elif page == "Real Route Optimizer":
 
             st.subheader("Recommended Charging Stops Near Route")
 
+            st.caption(
+              "Availability status is currently simulated from reliability indicators and data freshness. Future versions can replace this with live operator API data."
+            )
+
             if len(recommended_stops) == 0:
                 st.warning("No chargers found within the selected route buffer.")
                 st.stop()
