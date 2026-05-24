@@ -98,7 +98,7 @@ page = st.sidebar.radio(
         "Charger Recommendation",
         "Reservation Simulation",
         "Congestion Risk Analysis",
-        "Operator Fragmentation"
+        "Operator Fragmentation",
         "Project Insights"
     ]
 )
@@ -122,6 +122,8 @@ if page == "Home":
     - Reliability intelligence scoring
     - Charger recommendation engine
     - Reservation simulation
+    - Congestion risk analysis
+    - Operator fragmentation analysis
     - National EV infrastructure analytics
     """)
 
@@ -441,6 +443,11 @@ elif page == "Reservation Simulation":
         st.write("Expiry time:", expiry_time.strftime("%Y-%m-%d %H:%M:%S"))
 
         st.code(f"ACCESS CODE: {access_code}")
+
+# -----------------------------------
+# CONGESTION RISK ANALYSIS
+# -----------------------------------
+
 elif page == "Congestion Risk Analysis":
 
     st.title("🚦 Congestion Risk Analysis")
@@ -452,15 +459,7 @@ elif page == "Congestion Risk Analysis":
 
     congestion_df = ocm_df.copy()
 
-    congestion_df["max_power_kw"] = (
-        congestion_df["max_power_kw"]
-        .fillna(0)
-    )
-
-    # Higher congestion risk:
-    # - lower charger power
-    # - lower reliability
-    # - fewer stations
+    congestion_df["max_power_kw"] = congestion_df["max_power_kw"].fillna(0)
 
     state_station_counts = (
         congestion_df.groupby("state_clean")
@@ -474,22 +473,9 @@ elif page == "Congestion Risk Analysis":
     )
 
     congestion_df["congestion_risk_score"] = (
-        (
-            100
-            - congestion_df["reliability_score"]
-        ) * 0.4
-        +
-        (
-            150
-            - congestion_df["max_power_kw"]
-            .clip(upper=150)
-        ) * 0.3
-        +
-        (
-            100
-            / congestion_df["state_station_count"]
-            .clip(lower=1)
-        ) * 30
+        ((100 - congestion_df["reliability_score"]) * 0.4)
+        + ((150 - congestion_df["max_power_kw"].clip(upper=150)) * 0.3)
+        + ((100 / congestion_df["state_station_count"].clip(lower=1)) * 30)
     )
 
     congestion_df["congestion_risk_score"] = (
@@ -503,8 +489,7 @@ elif page == "Congestion Risk Analysis":
             return "High Risk"
         elif score >= 40:
             return "Medium Risk"
-        else:
-            return "Low Risk"
+        return "Low Risk"
 
     congestion_df["congestion_label"] = (
         congestion_df["congestion_risk_score"]
@@ -524,10 +509,7 @@ elif page == "Congestion Risk Analysis":
                 "congestion_label"
             ]
         ]
-        .sort_values(
-            "congestion_risk_score",
-            ascending=False
-        )
+        .sort_values("congestion_risk_score", ascending=False)
     )
 
     st.dataframe(
@@ -551,7 +533,12 @@ elif page == "Congestion Risk Analysis":
     st.bar_chart(
         congestion_dist.set_index("Congestion Risk")
     )
- elif page == "Operator Fragmentation":
+
+# -----------------------------------
+# OPERATOR FRAGMENTATION
+# -----------------------------------
+
+elif page == "Operator Fragmentation":
 
     st.title("🧩 Operator Fragmentation Analysis")
 
@@ -601,9 +588,17 @@ elif page == "Congestion Risk Analysis":
             operator_summary["operator"].nunique()
         )
 
+        top_operator_share = 0
+
+        if operator_summary["total_stations"].sum() > 0:
+            top_operator_share = (
+                operator_summary["total_stations"].max()
+                / operator_summary["total_stations"].sum()
+            ) * 100
+
         col2.metric(
             "Top Operator Share",
-            f"{round((operator_summary['total_stations'].max() / max(operator_summary['total_stations'].sum(), 1)) * 100, 1)}%"
+            f"{round(top_operator_share, 1)}%"
         )
 
         col3.metric(
@@ -625,6 +620,7 @@ elif page == "Congestion Risk Analysis":
             .head(10)
             .set_index("operator")["total_stations"]
         )
+
 # -----------------------------------
 # PROJECT INSIGHTS
 # -----------------------------------
@@ -648,6 +644,10 @@ elif page == "Project Insights":
     **4. Public EV datasets need cleaning.**  
     Inconsistent state and location metadata show why infrastructure data products need strong data quality checks.
 
-    **5. ChargeSense can evolve into a decision-support tool.**  
-    Future versions could support charger investment planning, congestion forecasting, and smart route recommendations.
+    **5. Operator fragmentation creates user friction.**  
+    Drivers may need multiple charging apps because infrastructure is split across different providers.
+
+    **6. ChargeSense can evolve into a decision-support tool.**  
+    Future versions could support charger investment planning, congestion forecasting,
+    live availability, and smart route recommendations.
     """)
