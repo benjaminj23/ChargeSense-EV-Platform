@@ -98,7 +98,7 @@ page = st.sidebar.radio(
         "Charger Recommendation",
         "Reservation Simulation",
         "Congestion Risk Analysis",
-        "Operator Fragmentation",
+        "Charging Type Mix",
         "Project Insights"
     ]
 )
