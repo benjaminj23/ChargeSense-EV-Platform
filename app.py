@@ -97,6 +97,7 @@ page = st.sidebar.radio(
         "Reliability Intelligence",
         "Charger Recommendation",
         "Reservation Simulation",
+        "Infrastructure Gap Analysis",
         "Project Insights"
     ]
 )
