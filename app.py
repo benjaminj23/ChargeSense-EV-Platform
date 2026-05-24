@@ -22,7 +22,10 @@ st.set_page_config(
 def load_data():
     nsw_df = pd.read_csv("ev_chargers_nsw_enriched.csv")
     ocm_df = pd.read_csv("openchargemap_au_enriched.csv")
-    return nsw_df, ocm_df
+    ml_df = pd.read_csv("openchargemap_au_ml_predictions.csv")
+    return nsw_df, ocm_df, ml_df
+
+nsw_df, ocm_df, ml_df = load_data()
 
 nsw_df, ocm_df = load_data()
 
@@ -147,6 +150,7 @@ page = st.sidebar.radio(
         "Future Pressure Forecast",
         "Route Intelligence",
         "Charging Type Mix",
+        "Predictive Maintenance",
         "Project Insights"
     ]
 )
@@ -934,7 +938,69 @@ elif page == "Charging Type Mix":
         ].head(30),
         use_container_width=True
     )
+elif page == "Predictive Maintenance":
 
+    st.title("🧠 Predictive Maintenance Prototype")
+
+    st.markdown("""
+    This prototype identifies charging stations with higher predicted reliability risk.
+    The current model is a rule-based ML prototype built from reliability-related features,
+    so it should be interpreted as an early warning system rather than a production-grade failure model.
+    """)
+
+    ml_df["failure_risk_probability"] = pd.to_numeric(
+        ml_df["failure_risk_probability"],
+        errors="coerce"
+    )
+
+    high_risk = ml_df[
+        ml_df["failure_risk_probability"] >= 0.7
+    ].copy()
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric("Stations Scored", len(ml_df))
+    col2.metric("High Risk Stations", len(high_risk))
+    col3.metric(
+        "Avg Failure Risk Probability",
+        round(ml_df["failure_risk_probability"].mean(), 2)
+    )
+
+    st.subheader("Highest Predicted Reliability Risk")
+
+    risk_table = (
+        ml_df[
+            [
+                "station_name",
+                "state_clean",
+                "max_power_kw",
+                "reliability_score",
+                "days_since_verified",
+                "failure_risk_probability",
+                "predicted_failure_risk"
+            ]
+        ]
+        .sort_values("failure_risk_probability", ascending=False)
+    )
+
+    st.dataframe(
+        risk_table.head(25),
+        use_container_width=True
+    )
+
+    st.subheader("Predicted Risk Distribution")
+
+    risk_dist = (
+        ml_df["predicted_failure_risk"]
+        .value_counts()
+        .reset_index()
+    )
+
+    risk_dist.columns = ["Predicted Risk Class", "Count"]
+
+    st.bar_chart(
+        risk_dist.set_index("Predicted Risk Class")
+    )
 # -----------------------------------
 # PROJECT INSIGHTS
 # -----------------------------------
