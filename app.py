@@ -1321,7 +1321,7 @@ elif page == "Real Route Optimizer":
         return radius_km * c
     
 
-        def geocode_place(place_name):
+    def geocode_place(place_name):
          url = "https://nominatim.openstreetmap.org/search"
 
         params = {
