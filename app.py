@@ -1621,6 +1621,21 @@ elif page == "Real Route Optimizer":
 
             route_map_df = ocm_df.copy()
 
+            route_map_df["availability_status"] = (
+                route_map_df.apply(simulated_availability, axis=1)
+            )
+
+            availability_weight = {
+                "Available": 100,
+                "Busy": 30,
+                "Unknown": 0,
+                "Offline": -200
+            }
+
+            route_map_df["availability_score"] = (
+                route_map_df["availability_status"].map(availability_weight)
+            )
+
             route_map_df["latitude"] = pd.to_numeric(
                 route_map_df["latitude"],
                 errors="coerce"
