@@ -1686,7 +1686,7 @@ elif page == "Real Route Optimizer":
                 route_map_df["distance_to_route_km"] <= route_buffer_km
             ].copy()
 
-          near_route_df["route_recommendation_score"] = (  near_route_df["route_score"].fillna(0) + near_route_df["availability_score"].fillna(0) - (near_route_df["distance_to_route_km"] * 10))
+            near_route_df["route_recommendation_score"] = (  near_route_df["route_score"].fillna(0) + near_route_df["availability_score"].fillna(0) - (near_route_df["distance_to_route_km"] * 10))
 
             recommended_stops = (
                 near_route_df
