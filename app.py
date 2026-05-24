@@ -1674,23 +1674,20 @@ elif page == "Real Route Optimizer":
 
             st.subheader("Suggested Charging Stop Sequence")
 
-            stop_interval_km = ev_range_km - safety_buffer_km
+            usable_start_range_km = ev_range_km * (starting_battery_percent / 100)
 
-            if stop_interval_km <= 0:
-                st.warning("Safety buffer must be smaller than EV driving range.")
-                st.stop()
+            usable_after_charge_range_km = ev_range_km * ((charge_to_percent - charge_from_percent) / 100)
 
-            num_stops_needed = max(
-                1,
-                int(distance_km // stop_interval_km)
-            )
+            safe_start_range_km = max(usable_start_range_km - safety_buffer_km, 1)
 
-            route_stop_targets = [
-                (i + 1) * stop_interval_km
-                for i in range(num_stops_needed)
-                if (i + 1) * stop_interval_km < distance_km
-            ]
+            safe_after_charge_range_km = max( usable_after_charge_range_km - safety_buffer_km, 1)
 
+            route_stop_targets = []
+            distance_covered = safe_start_range_km
+            while distance_covered < distance_km:
+                 route_stop_targets.append(distance_covered)
+                 distance_covered += safe_after_charge_range_km
+    
             sequence_stops = []
             used_station_names = set()
 
