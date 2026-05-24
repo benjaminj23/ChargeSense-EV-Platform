@@ -1738,7 +1738,7 @@ elif page == "Real Route Optimizer":
 
             headers = {
                 "Authorization": ors_api_key,
-                Accept": "application/json, application/geo+json",
+                "Accept": "application/json, application/geo+json",
                 "Content-Type": "application/json; charset=utf-8"
             }
 
