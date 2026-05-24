@@ -161,6 +161,7 @@ page = st.sidebar.radio(
         "Reservation Simulation",
         "Congestion Risk Analysis",
         "Charging Type Mix",
+        "Infrastructure Gap Analysis",
         "Project Insights"
     ]
 )
@@ -662,6 +663,68 @@ elif page == "Charging Type Mix":
             ]
         ].head(30),
         use_container_width=True
+    )
+elif page == "Infrastructure Gap Analysis":
+
+    st.title("🏙️ Infrastructure Gap Analysis")
+
+    st.markdown("""
+    Identify states that may require stronger EV charging investment based on
+    charger density, ultra-fast charger availability, and reliability.
+    """)
+
+    gap_view = (
+        state_metrics[
+            [
+                "state_clean",
+                "population",
+                "total_stations",
+                "chargers_per_million",
+                "ultra_fast_sites",
+                "ultra_fast_ratio",
+                "avg_reliability",
+                "infrastructure_gap_score"
+            ]
+        ]
+        .sort_values("infrastructure_gap_score", ascending=False)
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    highest_gap = gap_view.iloc[0]
+
+    col1.metric(
+        "Highest Gap State",
+        highest_gap["state_clean"]
+    )
+
+    col2.metric(
+        "Gap Score",
+        round(highest_gap["infrastructure_gap_score"], 1)
+    )
+
+    col3.metric(
+        "Chargers / Million",
+        round(highest_gap["chargers_per_million"], 1)
+    )
+
+    st.subheader("Infrastructure Gap Ranking")
+
+    st.dataframe(
+        gap_view,
+        use_container_width=True
+    )
+
+    st.subheader("Infrastructure Gap Score by State")
+
+    st.bar_chart(
+        gap_view.set_index("state_clean")["infrastructure_gap_score"]
+    )
+
+    st.subheader("Chargers per Million People")
+
+    st.bar_chart(
+        gap_view.set_index("state_clean")["chargers_per_million"]
     )
 # -----------------------------------
 # PROJECT INSIGHTS
