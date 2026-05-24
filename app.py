@@ -484,13 +484,37 @@ elif page == "Reservation Simulation":
         "Select Charging Station",
         top_sites["Station_name"].unique()
     )
+    
+    selected_row = top_sites[
+    top_sites["Station_name"] == selected_station
+    ].iloc[0]
 
-    reservation_minutes = st.slider(
+    reservation_score = selected_row["reservation_need_index"]
+    operator = selected_row["Operator"]
+    col1, col2 = st.columns(2)
+
+    col1.metric(
+    "Operator",
+    operator
+    )
+
+    col2.metric(
+    "Reservation Need Score",
+    round(reservation_score, 2)
+    )
+
+    if reservation_score >= 13:
+      st.warning("High reservation priority: limited high-speed charging capacity may create queue pressure.")
+    elif reservation_score >= 10:
+      st.info("Medium reservation priority: booking may help reduce uncertainty.")
+    else:
+      st.success("Lower reservation priority: queue pressure is likely manageable.")
+       reservation_minutes = st.slider(
         "Reservation Duration (minutes)",
         15,
         60,
         20
-    )
+      )
 
     def generate_access_code():
         return str(random.randint(1000, 9999))
