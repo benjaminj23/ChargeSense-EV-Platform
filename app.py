@@ -1694,11 +1694,11 @@ elif page == "Real Route Optimizer":
 
             st.subheader("Suggested Charging Stop Sequence")
 
-            usable_start_range_km = ev_range_km * (
+            usable_start_range_km = adjusted_ev_range_km * (
                 starting_battery_percent / 100
             )
 
-            usable_after_charge_range_km = ev_range_km * (
+            usable_after_charge_range_km = adjusted_ev_range_km * (
                 (dynamic_charge_to_percent - charge_from_percent) / 100
             )
 
@@ -1732,7 +1732,7 @@ elif page == "Real Route Optimizer":
                 leg_distance_km = target_distance - previous_distance_km
 
                 battery_used_percent = (
-                    leg_distance_km / ev_range_km
+                    leg_distance_km / adjusted_ev_range_km
                 ) * 100
 
                 arrival_battery_percent = max(
