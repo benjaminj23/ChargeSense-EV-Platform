@@ -1945,9 +1945,7 @@ elif page == "Real Route Optimizer":
             st.subheader("Route Map with Recommended Chargers")
 
             recommended_stops["plot_size"] = (
-                recommended_stops["max_power_kw"]
-                .(1)
-                .clip(lower=5, upper=350)
+                recommended_stops["max_power_kw"].fillna(1).clip(lower=5, upper=350)
             )
 
             fig = px.scatter_mapbox(
