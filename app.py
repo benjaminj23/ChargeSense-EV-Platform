@@ -1734,7 +1734,7 @@ elif page == "Real Route Optimizer":
 
         with st.spinner("Calculating route..."):
 
-            url = https://api.openrouteservice.org/v2/directions/driving-car/geojson
+            url = "https://api.openrouteservice.org/v2/directions/driving-car/geojson"
 
             headers = {
                 "Authorization": ors_api_key,
