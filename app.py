@@ -1879,6 +1879,20 @@ elif page == "Real Route Optimizer":
                     sequence_df,
                     use_container_width=True
                 )
+            st.subheader("Trip Plan Summary")
+            trip_summary = f"""
+            Route: {start_label} → {destination_label}
+            EV: {selected_ev}
+            Distance: {round(distance_km, 1)} km
+            Drive Time: {round(duration_hours, 1)} hrs
+            Charging Stops: {len(sequence_df)}
+            Total Charging Time: {round(total_charging_time_min, 1)} min
+            Estimated Total Trip Time: {round(total_trip_time_hours, 1)} hrs
+            Strategy: {charging_strategy}
+            """
+            st.code(trip_summary)
+
+            st.download_button( "Download Trip Plan", trip_summary, file_name="chargesense_trip_plan.txt")
 
             st.subheader("Route Map with Recommended Chargers")
 
