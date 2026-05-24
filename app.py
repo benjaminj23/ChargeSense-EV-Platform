@@ -163,6 +163,7 @@ page = st.sidebar.radio(
         "Charging Type Mix",
         "Infrastructure Gap Analysis",
         "Future Pressure Forecast",
+        "Route Intelligence",
         "Project Insights"
     ]
 )
