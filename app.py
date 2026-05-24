@@ -1274,6 +1274,16 @@ elif page == "Real Route Optimizer":
         "Geelong": [144.3617, -38.1499]
     }
 
+    ev_profiles = {
+        "Tesla Model 3 RWD": {"battery_kwh": 60, "range_km": 513},
+        "Tesla Model Y RWD": {"battery_kwh": 60, "range_km": 455},
+        "BYD Atto 3": {"battery_kwh": 60.5, "range_km": 420},
+        "BYD Seal": {"battery_kwh": 82.5, "range_km": 570},
+        "Kia EV6": {"battery_kwh": 77.4, "range_km": 528},
+        "Hyundai Ioniq 5": {"battery_kwh": 77.4, "range_km": 507},
+        "MG4 Excite 51": {"battery_kwh": 51, "range_km": 350}
+    }
+
     def haversine_distance(lat1, lon1, lat2, lon2):
         import math
 
@@ -1398,28 +1408,57 @@ elif page == "Real Route Optimizer":
         start_coords = None
         end_coords = None
 
-    route_buffer_km = st.slider(
-        "Maximum Distance from Route (km)",
+    st.subheader("EV Trip Settings")
+
+    selected_ev = st.selectbox(
+        "Select EV Model",
+        list(ev_profiles.keys())
+    )
+
+    battery_kwh = ev_profiles[selected_ev]["battery_kwh"]
+    ev_range_km = ev_profiles[selected_ev]["range_km"]
+
+    st.info(
+        f"{selected_ev}: {battery_kwh} kWh battery, approx. {ev_range_km} km driving range."
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        route_buffer_km = st.slider(
+            "Maximum Distance from Route (km)",
+            5,
+            50,
+            15
+        )
+
+    with col2:
+        safety_buffer_km = st.slider(
+            "Safety Buffer Before Charging (km)",
+            20,
+            100,
+            50
+        )
+
+    charge_from_percent = st.slider(
+        "Estimated Arrival Battery at Charging Stop (%)",
         5,
-        10,
-        15
+        50,
+        20
     )
 
-    ev_range_km = st.slider(
-        "Estimated EV Driving Range (km)",
-        150,
-        700,
-        350
-    )
-
-    safety_buffer_km = st.slider(
-        "Safety Buffer Before Charging (km)",
-        20,
+    charge_to_percent = st.slider(
+        "Target Battery After Charging (%)",
+        50,
         100,
-        50
+        80
     )
 
     if st.button("Generate Real Route"):
+
+        if charge_to_percent <= charge_from_percent:
+            st.warning("Target battery must be higher than arrival battery.")
+            st.stop()
 
         if route_input_mode == "Major City":
 
@@ -1514,7 +1553,7 @@ elif page == "Real Route Optimizer":
                 f"Route generated from {start_label} to {destination_label}"
             )
 
-            metric_col1, metric_col2 = st.columns(2)
+            metric_col1, metric_col2, metric_col3 = st.columns(3)
 
             metric_col1.metric(
                 "Route Distance",
@@ -1524,6 +1563,11 @@ elif page == "Real Route Optimizer":
             metric_col2.metric(
                 "Estimated Drive Time",
                 f"{round(duration_hours, 1)} hrs"
+            )
+
+            metric_col3.metric(
+                "Selected EV Range",
+                f"{ev_range_km} km"
             )
 
             route_map_df = ocm_df.copy()
@@ -1578,8 +1622,11 @@ elif page == "Real Route Optimizer":
             near_route_df = route_map_df[
                 route_map_df["distance_to_route_km"] <= route_buffer_km
             ].copy()
-            near_route_df["route_recommendation_score"] = (near_route_df["route_score"]   - (near_route_df["distance_to_route_km"] * 10))
 
+            near_route_df["route_recommendation_score"] = (
+                near_route_df["route_score"]
+                - (near_route_df["distance_to_route_km"] * 10)
+            )
 
             recommended_stops = (
                 near_route_df
@@ -1607,6 +1654,7 @@ elif page == "Real Route Optimizer":
                         "max_power_kw",
                         "reliability_score",
                         "route_score",
+                        "route_recommendation_score",
                         "distance_to_route_km"
                     ]
                 ],
@@ -1631,6 +1679,12 @@ elif page == "Real Route Optimizer":
                 for i in range(num_stops_needed)
                 if (i + 1) * stop_interval_km < distance_km
             ]
+
+            energy_needed_kwh = (
+                battery_kwh
+                * (charge_to_percent - charge_from_percent)
+                / 100
+            )
 
             sequence_stops = []
             used_station_names = set()
@@ -1676,7 +1730,7 @@ elif page == "Real Route Optimizer":
                     .sort_values(
                         [
                             "distance_to_target_km",
-                            "route_score"
+                            "route_recommendation_score"
                         ],
                         ascending=[True, False]
                     )
@@ -1684,6 +1738,17 @@ elif page == "Real Route Optimizer":
                 )
 
                 used_station_names.add(best_stop["station_name"])
+
+                charger_power_kw = max(
+                    float(best_stop["max_power_kw"])
+                    if pd.notna(best_stop["max_power_kw"])
+                    else 1,
+                    1
+                )
+
+                estimated_charge_time_min = (
+                    energy_needed_kwh / charger_power_kw
+                ) * 60
 
                 sequence_stops.append({
                     "stop_number": len(sequence_stops) + 1,
@@ -1696,6 +1761,14 @@ elif page == "Real Route Optimizer":
                     "route_score": best_stop["route_score"],
                     "distance_to_target_km": round(
                         best_stop["distance_to_target_km"],
+                        1
+                    ),
+                    "estimated_charge_kwh": round(
+                        energy_needed_kwh,
+                        1
+                    ),
+                    "estimated_charge_time_min": round(
+                        estimated_charge_time_min,
                         1
                     )
                 })
@@ -1734,13 +1807,13 @@ elif page == "Real Route Optimizer":
                     "max_power_kw": True,
                     "reliability_score": True,
                     "route_score": True,
+                    "route_recommendation_score": True,
                     "distance_to_route_km": True,
-                    "route_recommendation_score":True,
                     "latitude": False,
                     "longitude": False,
                     "plot_size": False
                 },
-                color="route_score",
+                color="route_recommendation_score",
                 size="plot_size",
                 zoom=4,
                 height=700
