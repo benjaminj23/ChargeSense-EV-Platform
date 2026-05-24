@@ -1698,18 +1698,28 @@ elif page == "Real Route Optimizer":
     st.title("🛰️ Real Route Optimizer")
 
     st.markdown("""
-    Generate a real driving route between Australian cities
-    and identify high-quality EV charging stations near the route.
+    Generate a real driving route between Australian cities and identify high-quality
+    EV charging stations near the route.
+
+    This version uses OSRM public routing data for route geometry.
     """)
 
-    ors_api_key = st.secrets.get("ORS_API_KEY", None)
+    city_coordinates = {
+        "Sydney": [151.2093, -33.8688],
+        "Melbourne": [144.9631, -37.8136],
+        "Brisbane": [153.0251, -27.4698],
+        "Adelaide": [138.6007, -34.9285],
+        "Perth": [115.8605, -31.9505],
+        "Canberra": [149.1300, -35.2809],
+        "Hobart": [147.3272, -42.8821],
+        "Darwin": [130.8456, -12.4634],
+        "Gold Coast": [153.4000, -28.0167],
+        "Newcastle": [151.7817, -32.9283],
+        "Wollongong": [150.8931, -34.4278],
+        "Geelong": [144.3617, -38.1499]
+    }
 
-    if ors_api_key is None:
-      st.error("OpenRouteService API key is missing.")
-      st.stop()
-
-    ors_api_key = str(ors_api_key).strip()
-    cities = list(city_coordinates.keys())
+    cities = sorted(city_coordinates.keys())
 
     col1, col2 = st.columns(2)
 
@@ -1717,145 +1727,181 @@ elif page == "Real Route Optimizer":
         start_city = st.selectbox(
             "Start City",
             cities,
-            index=0
+            index=cities.index("Sydney")
         )
 
     with col2:
         destination_city = st.selectbox(
             "Destination City",
             cities,
-            index=1
+            index=cities.index("Melbourne")
         )
 
     start_coords = city_coordinates[start_city]
     end_coords = city_coordinates[destination_city]
 
-    if st.button("Generate Real Route"):
+    if start_city == destination_city:
+        st.warning("Start city and destination city cannot be the same.")
+    else:
+        if st.button("Generate Real Route"):
 
-        with st.spinner("Calculating route..."):
+            with st.spinner("Calculating route..."):
 
-            url = "https://api.openrouteservice.org/v2/directions/driving-car/geojson"
+                url = (
+                    f"https://router.project-osrm.org/route/v1/driving/"
+                    f"{start_coords[0]},{start_coords[1]};"
+                    f"{end_coords[0]},{end_coords[1]}"
+                )
 
-            headers = {
-                "Authorization": ors_api_key,
-                "Accept": "application/json, application/geo+json",
-                "Content-Type": "application/json; charset=utf-8"
-            }
+                params = {
+                    "overview": "full",
+                    "geometries": "geojson"
+                }
 
-            body = {
-                "coordinates": [
-                    start_coords,
-                    end_coords
-                ]
-            }
+                try:
+                    response = requests.get(
+                        url,
+                        params=params,
+                        timeout=30
+                    )
+                except requests.exceptions.RequestException as e:
+                    st.error("Could not connect to OSRM routing service.")
+                    st.write(str(e))
+                    st.stop()
 
-            response = requests.post(
-                url,
-                json=body,
-                headers=headers,
-                timeout=30
-            )
-             except requests.exceptions.RequestException as e:
-              st.error("Could not connect to OpenRouteService.")
-              st.write(str(e))
-              st.stop()
+                if response.status_code != 200:
+                    st.error(f"OSRM Error {response.status_code}")
+                    st.write(response.text)
+                    st.stop()
 
-            if response.status_code != 200:
-                st.error(f"ORS Error {response.status_code}")
-                st.write(response.text)
-                st.stop()
+                route_data = response.json()
 
-            route_data = response.json()
+                if "routes" not in route_data or len(route_data["routes"]) == 0:
+                    st.error("No route found.")
+                    st.stop()
 
-            route_coords = route_data["routes"][0]["geometry"]["coordinates"]
+                route = route_data["routes"][0]
 
-            route_df = pd.DataFrame(
-                route_coords,
-                columns=["longitude", "latitude"]
-            )
+                route_coords = route["geometry"]["coordinates"]
 
-            route_map_df = ocm_df.copy()
+                route_df = pd.DataFrame(
+                    route_coords,
+                    columns=["longitude", "latitude"]
+                )
 
-            route_map_df["latitude"] = pd.to_numeric(
-                route_map_df["latitude"],
-                errors="coerce"
-            )
+                distance_km = route["distance"] / 1000
+                duration_hours = route["duration"] / 3600
 
-            route_map_df["longitude"] = pd.to_numeric(
-                route_map_df["longitude"],
-                errors="coerce"
-            )
+                st.success(
+                    f"Route generated from {start_city} to {destination_city}"
+                )
 
-            route_map_df = route_map_df.dropna(
-                subset=["latitude", "longitude"]
-            )
+                col1, col2 = st.columns(2)
 
-            route_map_df["route_score"] = (
-                route_map_df["max_power_kw"].fillna(0) * 0.6
-                +
-                route_map_df["reliability_score"].fillna(0) * 0.4
-            )
+                col1.metric(
+                    "Route Distance",
+                    f"{round(distance_km, 1)} km"
+                )
 
-            recommended_stops = (
-                route_map_df
-                .sort_values("route_score", ascending=False)
-                .head(25)
-            )
+                col2.metric(
+                    "Estimated Drive Time",
+                    f"{round(duration_hours, 1)} hrs"
+                )
 
-            st.success(
-                f"Real route generated from {start_city} to {destination_city}"
-            )
+                route_map_df = ocm_df.copy()
 
-            st.subheader("Recommended Charging Stops")
+                route_map_df["latitude"] = pd.to_numeric(
+                    route_map_df["latitude"],
+                    errors="coerce"
+                )
 
-            st.dataframe(
-                recommended_stops[
-                    [
-                        "station_name",
-                        "town",
-                        "state_clean",
-                        "max_power_kw",
-                        "reliability_score",
-                        "route_score"
-                    ]
-                ],
-                use_container_width=True
-            )
+                route_map_df["longitude"] = pd.to_numeric(
+                    route_map_df["longitude"],
+                    errors="coerce"
+                )
 
-            fig = px.scatter_mapbox(
-                recommended_stops,
-                lat="latitude",
-                lon="longitude",
-                hover_name="station_name",
-                hover_data={
-                    "town": True,
-                    "state_clean": True,
-                    "max_power_kw": True,
-                    "reliability_score": True
-                },
-                color="route_score",
-                size="max_power_kw",
-                zoom=4,
-                height=700
-            )
+                route_map_df["max_power_kw"] = pd.to_numeric(
+                    route_map_df["max_power_kw"],
+                    errors="coerce"
+                )
 
-            fig.add_scattermapbox(
-                lat=route_df["latitude"],
-                lon=route_df["longitude"],
-                mode="lines",
-                line=dict(width=4),
-                name="Driving Route"
-            )
+                route_map_df = route_map_df.dropna(
+                    subset=["latitude", "longitude"]
+                )
 
-            fig.update_layout(
-                mapbox_style="open-street-map",
-                margin={"r":0,"t":0,"l":0,"b":0}
-            )
+                route_map_df["route_score"] = (
+                    route_map_df["max_power_kw"].fillna(0) * 0.6
+                    + route_map_df["reliability_score"].fillna(0) * 0.4
+                )
 
-            st.plotly_chart(
-                fig,
-                use_container_width=True
-            )
+                recommended_stops = (
+                    route_map_df
+                    .sort_values("route_score", ascending=False)
+                    .head(30)
+                )
+
+                st.subheader("Recommended Charging Stops")
+
+                st.dataframe(
+                    recommended_stops[
+                        [
+                            "station_name",
+                            "town",
+                            "state_clean",
+                            "max_power_kw",
+                            "reliability_score",
+                            "route_score"
+                        ]
+                    ],
+                    use_container_width=True
+                )
+
+                st.subheader("Route Map with Recommended Chargers")
+
+                recommended_stops["plot_size"] = (
+                    recommended_stops["max_power_kw"]
+                    .fillna(1)
+                    .clip(lower=5, upper=350)
+                )
+
+                fig = px.scatter_mapbox(
+                    recommended_stops,
+                    lat="latitude",
+                    lon="longitude",
+                    hover_name="station_name",
+                    hover_data={
+                        "town": True,
+                        "state_clean": True,
+                        "max_power_kw": True,
+                        "reliability_score": True,
+                        "route_score": True,
+                        "latitude": False,
+                        "longitude": False,
+                        "plot_size": False
+                    },
+                    color="route_score",
+                    size="plot_size",
+                    zoom=4,
+                    height=700
+                )
+
+                fig.add_scattermapbox(
+                    lat=route_df["latitude"],
+                    lon=route_df["longitude"],
+                    mode="lines",
+                    line=dict(width=4),
+                    name="Driving Route"
+                )
+
+                fig.update_layout(
+                    mapbox_style="open-street-map",
+                    margin={"r": 0, "t": 0, "l": 0, "b": 0}
+                )
+
+                st.plotly_chart(
+                    fig,
+                    use_container_width=True
+                )
 # -----------------------------
 # PROJECT INSIGHTS
 # -----------------------------
