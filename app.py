@@ -1761,6 +1761,7 @@ elif page == "Real Route Optimizer":
             risk_col5.metric(  "Avg Reliability",   round(avg_corridor_reliability, 1))
 
             risk_col6.metric(  "Avg Availability Score",  round(avg_corridor_availability, 1))
+            st.caption(  "Interpretation: A route can have many chargers but still show medium or high corridor risk if reliability, data freshness, or estimated availability is weak.")
 
             
             st.subheader("Recommended Charging Stops Near Route")
