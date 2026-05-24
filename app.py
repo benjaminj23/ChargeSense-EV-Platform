@@ -1598,8 +1598,8 @@ elif page == "Real Route Optimizer":
             )
 
             metric_col3.metric(
-                "Selected EV Range",
-                f"{ev_range_km} km"
+                "Adjusted  EV Range",
+                f"{round(adjusted_ev_range_km, 1)} km"
             )
 
             route_map_df = ocm_df.copy()
