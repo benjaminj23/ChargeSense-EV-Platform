@@ -29,68 +29,6 @@ nsw_df, ocm_df = load_data()
 # -----------------------------------
 # DATA PREP
 # -----------------------------------
-state_population = {
-    "New South Wales": 8500000,
-    "Victoria": 6900000,
-    "Queensland": 5600000,
-    "Western Australia": 3000000,
-    "South Australia": 1900000,
-    "Tasmania": 575000,
-    "ACT": 470000,
-    "Northern Territory": 260000
-}
-ocm_df["population"] = (
-    ocm_df["state_clean"]
-    .map(state_population)
-)
-state_metrics = (
-    ocm_df.groupby("state_clean")
-    .agg(
-        total_stations=("station_name", "count"),
-        avg_power_kw=("max_power_kw", "mean"),
-        avg_reliability=("reliability_score", "mean"),
-        ultra_fast_sites=(
-            "speed_category",
-            lambda x: (x == "Ultra-fast DC").sum()
-        ),
-        population=("population", "first")
-    )
-    .reset_index()
-)
-
-state_metrics["chargers_per_million"] = (
-    state_metrics["total_stations"]
-    / state_metrics["population"]
-) * 1_000_000
-
-state_metrics["ultra_fast_ratio"] = (
-    state_metrics["ultra_fast_sites"]
-    / state_metrics["total_stations"]
-)
-
-state_metrics["infrastructure_gap_score"] = (
-    (
-        100
-        - state_metrics["chargers_per_million"]
-        .clip(upper=100)
-    ) * 0.4
-    +
-    (
-        100
-        - state_metrics["avg_reliability"]
-    ) * 0.3
-    +
-    (
-        1
-        - state_metrics["ultra_fast_ratio"]
-    ) * 100 * 0.3
-)
-
-state_metrics["infrastructure_gap_score"] = (
-    state_metrics["infrastructure_gap_score"]
-    .clip(lower=0, upper=100)
-    .round(2)
-)
 
 ocm_df["max_power_kw"] = pd.to_numeric(
     ocm_df["max_power_kw"],
@@ -144,6 +82,51 @@ def reliability_label(score):
 
 ocm_df["reliability_label"] = ocm_df["reliability_score"].apply(reliability_label)
 
+state_population = {
+    "New South Wales": 8500000,
+    "Victoria": 6900000,
+    "Queensland": 5600000,
+    "Western Australia": 3000000,
+    "South Australia": 1900000,
+    "Tasmania": 575000,
+    "ACT": 470000,
+    "Northern Territory": 260000
+}
+
+ocm_df["population"] = ocm_df["state_clean"].map(state_population)
+
+state_metrics = (
+    ocm_df.groupby("state_clean")
+    .agg(
+        total_stations=("station_name", "count"),
+        avg_power_kw=("max_power_kw", "mean"),
+        avg_reliability=("reliability_score", "mean"),
+        ultra_fast_sites=("speed_category", lambda x: (x == "Ultra-fast DC").sum()),
+        population=("population", "first")
+    )
+    .reset_index()
+)
+
+state_metrics["chargers_per_million"] = (
+    state_metrics["total_stations"] / state_metrics["population"]
+) * 1_000_000
+
+state_metrics["ultra_fast_ratio"] = (
+    state_metrics["ultra_fast_sites"] / state_metrics["total_stations"]
+)
+
+state_metrics["infrastructure_gap_score"] = (
+    (100 - state_metrics["chargers_per_million"].clip(upper=100)) * 0.4
+    + (100 - state_metrics["avg_reliability"]) * 0.3
+    + (1 - state_metrics["ultra_fast_ratio"]) * 100 * 0.3
+)
+
+state_metrics["infrastructure_gap_score"] = (
+    state_metrics["infrastructure_gap_score"]
+    .clip(lower=0, upper=100)
+    .round(2)
+)
+
 # -----------------------------------
 # SIDEBAR
 # -----------------------------------
@@ -155,15 +138,15 @@ page = st.sidebar.radio(
     [
         "Home",
         "Infrastructure Overview",
+        "Infrastructure Gap Analysis",
         "Interactive Map",
         "Reliability Intelligence",
         "Charger Recommendation",
         "Reservation Simulation",
         "Congestion Risk Analysis",
-        "Charging Type Mix",
-        "Infrastructure Gap Analysis",
         "Future Pressure Forecast",
         "Route Intelligence",
+        "Charging Type Mix",
         "Project Insights"
     ]
 )
@@ -188,7 +171,8 @@ if page == "Home":
     - Charger recommendation engine
     - Reservation simulation
     - Congestion risk analysis
-    - Operator fragmentation analysis
+    - Future pressure forecasting
+    - Route intelligence
     - National EV infrastructure analytics
     """)
 
@@ -245,6 +229,63 @@ elif page == "Infrastructure Overview":
     st.bar_chart(state_summary.set_index("state_clean"))
 
 # -----------------------------------
+# INFRASTRUCTURE GAP ANALYSIS
+# -----------------------------------
+
+elif page == "Infrastructure Gap Analysis":
+
+    st.title("🏙️ Infrastructure Gap Analysis")
+
+    st.markdown("""
+    Identify states that may require stronger EV charging investment based on
+    charger density, ultra-fast charger availability, and reliability.
+    """)
+
+    gap_view = (
+        state_metrics[
+            [
+                "state_clean",
+                "population",
+                "total_stations",
+                "chargers_per_million",
+                "ultra_fast_sites",
+                "ultra_fast_ratio",
+                "avg_reliability",
+                "infrastructure_gap_score"
+            ]
+        ]
+        .dropna(subset=["population"])
+        .sort_values("infrastructure_gap_score", ascending=False)
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    highest_gap = gap_view.iloc[0]
+
+    col1.metric("Highest Gap State", highest_gap["state_clean"])
+    col2.metric("Gap Score", round(highest_gap["infrastructure_gap_score"], 1))
+    col3.metric("Chargers / Million", round(highest_gap["chargers_per_million"], 1))
+
+    st.subheader("Infrastructure Gap Ranking")
+
+    st.dataframe(
+        gap_view,
+        use_container_width=True
+    )
+
+    st.subheader("Infrastructure Gap Score by State")
+
+    st.bar_chart(
+        gap_view.set_index("state_clean")["infrastructure_gap_score"]
+    )
+
+    st.subheader("Chargers per Million People")
+
+    st.bar_chart(
+        gap_view.set_index("state_clean")["chargers_per_million"]
+    )
+
+# -----------------------------------
 # INTERACTIVE MAP
 # -----------------------------------
 
@@ -279,15 +320,8 @@ elif page == "Interactive Map":
         & (ocm_df["max_power_kw"].fillna(0) >= min_power)
     ].copy()
 
-    map_df["latitude"] = pd.to_numeric(
-        map_df["latitude"],
-        errors="coerce"
-    )
-
-    map_df["longitude"] = pd.to_numeric(
-        map_df["longitude"],
-        errors="coerce"
-    )
+    map_df["latitude"] = pd.to_numeric(map_df["latitude"], errors="coerce")
+    map_df["longitude"] = pd.to_numeric(map_df["longitude"], errors="coerce")
 
     map_df = map_df.dropna(subset=["latitude", "longitude"])
 
@@ -426,15 +460,9 @@ elif page == "Charger Recommendation":
         + rec_df["reliability_score"].fillna(0) * 0.4
     )
 
-    rec_df = rec_df.sort_values(
-        "recommendation_score",
-        ascending=False
-    )
+    rec_df = rec_df.sort_values("recommendation_score", ascending=False)
 
-    st.metric(
-        "Recommended Stations Found",
-        len(rec_df)
-    )
+    st.metric("Recommended Stations Found", len(rec_df))
 
     st.subheader("Recommended Charging Stations")
 
@@ -484,37 +512,42 @@ elif page == "Reservation Simulation":
         "Select Charging Station",
         top_sites["Station_name"].unique()
     )
-    
+
     selected_row = top_sites[
-    top_sites["Station_name"] == selected_station
+        top_sites["Station_name"] == selected_station
     ].iloc[0]
 
     reservation_score = selected_row["reservation_need_index"]
     operator = selected_row["Operator"]
+
     col1, col2 = st.columns(2)
 
-    col1.metric(
-    "Operator",
-    operator
-    )
+    col1.metric("Operator", operator)
 
     col2.metric(
-    "Reservation Need Score",
-    round(reservation_score, 2)
+        "Reservation Need Score",
+        round(reservation_score, 2)
     )
 
     if reservation_score >= 13:
-      st.warning("High reservation priority: limited high-speed charging capacity may create queue pressure.")
+        st.warning(
+            "High reservation priority: limited high-speed charging capacity may create queue pressure."
+        )
     elif reservation_score >= 10:
-      st.info("Medium reservation priority: booking may help reduce uncertainty.")
+        st.info(
+            "Medium reservation priority: booking may help reduce uncertainty."
+        )
     else:
-      st.success("Lower reservation priority: queue pressure is likely manageable.")
-       reservation_minutes = st.slider(
+        st.success(
+            "Lower reservation priority: queue pressure is likely manageable."
+        )
+
+    reservation_minutes = st.slider(
         "Reservation Duration (minutes)",
         15,
         60,
         20
-      )
+    )
 
     def generate_access_code():
         return str(random.randint(1000, 9999))
@@ -533,6 +566,14 @@ elif page == "Reservation Simulation":
 
         st.code(f"ACCESS CODE: {access_code}")
 
+        st.markdown("""
+        ### Reservation Rules
+
+        - Access code is valid only during the reservation window.
+        - If the driver does not arrive before expiry, the charger is released.
+        - Future versions could include no-show penalties and queue priority rules.
+        """)
+
 # -----------------------------------
 # CONGESTION RISK ANALYSIS
 # -----------------------------------
@@ -550,15 +591,10 @@ elif page == "Congestion Risk Analysis":
 
     congestion_df["max_power_kw"] = congestion_df["max_power_kw"].fillna(0)
 
-    state_station_counts = (
-        congestion_df.groupby("state_clean")
-        .size()
-        .to_dict()
-    )
+    state_station_counts = congestion_df.groupby("state_clean").size().to_dict()
 
     congestion_df["state_station_count"] = (
-        congestion_df["state_clean"]
-        .map(state_station_counts)
+        congestion_df["state_clean"].map(state_station_counts)
     )
 
     congestion_df["congestion_risk_score"] = (
@@ -581,8 +617,7 @@ elif page == "Congestion Risk Analysis":
         return "Low Risk"
 
     congestion_df["congestion_label"] = (
-        congestion_df["congestion_risk_score"]
-        .apply(congestion_label)
+        congestion_df["congestion_risk_score"].apply(congestion_label)
     )
 
     st.subheader("Highest Congestion Risk Stations")
@@ -614,145 +649,16 @@ elif page == "Congestion Risk Analysis":
         .reset_index()
     )
 
-    congestion_dist.columns = [
-        "Congestion Risk",
-        "Count"
-    ]
+    congestion_dist.columns = ["Congestion Risk", "Count"]
 
     st.bar_chart(
         congestion_dist.set_index("Congestion Risk")
     )
 
-elif page == "Charging Type Mix":
+# -----------------------------------
+# FUTURE PRESSURE FORECAST
+# -----------------------------------
 
-    st.title("🔌 Charging Type Mix")
-
-    st.markdown("""
-    Analyze the mix of charger speed categories across Australian states.
-    This helps identify whether regions are relying mainly on slower AC infrastructure
-    or building stronger fast and ultra-fast charging capacity.
-    """)
-
-    selected_state_mix = st.selectbox(
-        "Select State",
-        sorted(ocm_df["state_clean"].dropna().unique()),
-        key="mix_state"
-    )
-
-    mix_df = ocm_df[
-        ocm_df["state_clean"] == selected_state_mix
-    ]
-
-    speed_mix = (
-        mix_df["speed_category"]
-        .fillna("Unknown")
-        .value_counts()
-        .reset_index()
-    )
-
-    speed_mix.columns = ["Speed Category", "Count"]
-
-    col1, col2, col3 = st.columns(3)
-
-    col1.metric(
-        "Total Stations",
-        len(mix_df)
-    )
-
-    col2.metric(
-        "Ultra-fast Sites",
-        len(mix_df[mix_df["speed_category"] == "Ultra-fast DC"])
-    )
-
-    col3.metric(
-        "Average Power (kW)",
-        round(mix_df["max_power_kw"].mean(), 1)
-    )
-
-    st.subheader("Charging Speed Category Mix")
-
-    st.bar_chart(
-        speed_mix.set_index("Speed Category")
-    )
-
-    st.subheader("Station Details")
-
-    st.dataframe(
-        mix_df[
-            [
-                "station_name",
-                "town",
-                "state_clean",
-                "max_power_kw",
-                "speed_category",
-                "reliability_score"
-            ]
-        ].head(30),
-        use_container_width=True
-    )
-elif page == "Infrastructure Gap Analysis":
-
-    st.title("🏙️ Infrastructure Gap Analysis")
-
-    st.markdown("""
-    Identify states that may require stronger EV charging investment based on
-    charger density, ultra-fast charger availability, and reliability.
-    """)
-
-    gap_view = (
-        state_metrics[
-            [
-                "state_clean",
-                "population",
-                "total_stations",
-                "chargers_per_million",
-                "ultra_fast_sites",
-                "ultra_fast_ratio",
-                "avg_reliability",
-                "infrastructure_gap_score"
-            ]
-        ]
-        .sort_values("infrastructure_gap_score", ascending=False)
-    )
-
-    col1, col2, col3 = st.columns(3)
-
-    highest_gap = gap_view.iloc[0]
-
-    col1.metric(
-        "Highest Gap State",
-        highest_gap["state_clean"]
-    )
-
-    col2.metric(
-        "Gap Score",
-        round(highest_gap["infrastructure_gap_score"], 1)
-    )
-
-    col3.metric(
-        "Chargers / Million",
-        round(highest_gap["chargers_per_million"], 1)
-    )
-
-    st.subheader("Infrastructure Gap Ranking")
-
-    st.dataframe(
-        gap_view,
-        use_container_width=True
-    )
-
-    st.subheader("Infrastructure Gap Score by State")
-
-    st.bar_chart(
-        gap_view.set_index("state_clean")["infrastructure_gap_score"]
-    )
-
-    st.subheader("Chargers per Million People")
-
-    st.bar_chart(
-        gap_view.set_index("state_clean")["chargers_per_million"]
-    )
-    
 elif page == "Future Pressure Forecast":
 
     st.title("📈 Future Pressure Forecast")
@@ -826,6 +732,11 @@ elif page == "Future Pressure Forecast":
     st.bar_chart(
         forecast_df.set_index("state_clean")["additional_pressure"]
     )
+
+# -----------------------------------
+# ROUTE INTELLIGENCE
+# -----------------------------------
+
 elif page == "Route Intelligence":
 
     st.title("🛣️ Route Intelligence")
@@ -886,15 +797,9 @@ elif page == "Route Intelligence":
         + route_df["reliability_score"].fillna(0) * 0.4
     )
 
-    route_df = route_df.sort_values(
-        "route_score",
-        ascending=False
-    )
+    route_df = route_df.sort_values("route_score", ascending=False)
 
-    st.metric(
-        "Recommended Stops Found",
-        len(route_df)
-    )
+    st.metric("Recommended Stops Found", len(route_df))
 
     st.subheader("Top Recommended Charging Stops")
 
@@ -930,9 +835,7 @@ elif page == "Route Intelligence":
         errors="coerce"
     )
 
-    map_route_df = map_route_df.dropna(
-        subset=["latitude", "longitude"]
-    )
+    map_route_df = map_route_df.dropna(subset=["latitude", "longitude"])
 
     map_route_df["plot_size"] = (
         map_route_df["max_power_kw"]
@@ -970,6 +873,68 @@ elif page == "Route Intelligence":
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
+# -----------------------------------
+# CHARGING TYPE MIX
+# -----------------------------------
+
+elif page == "Charging Type Mix":
+
+    st.title("🔌 Charging Type Mix")
+
+    st.markdown("""
+    Analyze the mix of charger speed categories across Australian states.
+    This helps identify whether regions are relying mainly on slower AC infrastructure
+    or building stronger fast and ultra-fast charging capacity.
+    """)
+
+    selected_state_mix = st.selectbox(
+        "Select State",
+        sorted(ocm_df["state_clean"].dropna().unique()),
+        key="mix_state"
+    )
+
+    mix_df = ocm_df[
+        ocm_df["state_clean"] == selected_state_mix
+    ]
+
+    speed_mix = (
+        mix_df["speed_category"]
+        .fillna("Unknown")
+        .value_counts()
+        .reset_index()
+    )
+
+    speed_mix.columns = ["Speed Category", "Count"]
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric("Total Stations", len(mix_df))
+    col2.metric("Ultra-fast Sites", len(mix_df[mix_df["speed_category"] == "Ultra-fast DC"]))
+    col3.metric("Average Power (kW)", round(mix_df["max_power_kw"].mean(), 1))
+
+    st.subheader("Charging Speed Category Mix")
+
+    st.bar_chart(
+        speed_mix.set_index("Speed Category")
+    )
+
+    st.subheader("Station Details")
+
+    st.dataframe(
+        mix_df[
+            [
+                "station_name",
+                "town",
+                "state_clean",
+                "max_power_kw",
+                "speed_category",
+                "reliability_score"
+            ]
+        ].head(30),
+        use_container_width=True
+    )
+
 # -----------------------------------
 # PROJECT INSIGHTS
 # -----------------------------------
@@ -996,7 +961,10 @@ elif page == "Project Insights":
     **5. Charging type mix reveals infrastructure maturity.**  
     Regions with more ultra-fast DC chargers are better positioned for long-distance EV adoption and queue reduction.
 
-    **6. ChargeSense can evolve into a decision-support tool.**  
+    **6. Scenario forecasting helps evaluate future pressure.**  
+    Growth simulations can highlight which states may need stronger infrastructure investment as EV adoption rises.
+
+    **7. ChargeSense can evolve into a decision-support tool.**  
     Future versions could support charger investment planning, congestion forecasting,
     live availability, and smart route recommendations.
     """)
