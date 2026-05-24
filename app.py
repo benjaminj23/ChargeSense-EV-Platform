@@ -1304,6 +1304,7 @@ elif page == "Real Route Optimizer":
         c = 2 * math.asin(math.sqrt(a))
 
         return radius_km * c
+    
 
     def geocode_place(place_name):
         url = "https://nominatim.openstreetmap.org/search"
@@ -1348,7 +1349,17 @@ elif page == "Real Route Optimizer":
             "longitude": float(result["lon"]),
             "latitude": float(result["lat"])
         }
+  def simulated_availability(row):
+    reliability = row.get("reliability_score", 0)
 
+    if reliability >= 70:
+        return "Available"
+    elif reliability >= 40:
+        return "Busy"
+    elif reliability > 0:
+        return "Unknown"
+    else:
+        return "Offline"
     route_input_mode = st.radio(
         "Route Input Mode",
         ["Major City", "Custom Place"],
