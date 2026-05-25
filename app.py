@@ -269,7 +269,7 @@ if page == "Home":
     st.divider()
 
     st.caption(
-        "Built using Python, Streamlit, OpenChargeMap API data, and NSW EV infrastructure data."
+        "Built using Python, Streamlit, OpenChargeMap API data and NSW EV infrastructure data."
     )
 
     st.link_button("View GitHub Repository", "YOUR_GITHUB_LINK")
@@ -310,11 +310,11 @@ elif page == "Infrastructure Gap Analysis":
 
     st.markdown("""
     Identify states that may require stronger EV charging investment based on
-    charger density, EV adoption, ultra-fast charger availability, and reliability.
+    charger density, EV adoption, ultra-fast charger availability and reliability.
     """)
 
     st.caption(
-        "Investment priority combines chargers per 1,000 EVs, EV growth rate, charger reliability, and ultra-fast charger coverage."
+        "Investment priority combines chargers per 1,000 EVs, EV growth rate, charger reliability and ultra-fast charger coverage."
     )
 
     gap_view = (
@@ -431,7 +431,7 @@ elif page == "Infrastructure Gap Analysis":
     ### How to interpret this
 
     **Infrastructure Gap Score** shows where charging infrastructure may be weak relative to population,
-    charger reliability, and ultra-fast charger availability.
+    charger reliability and ultra-fast charger availability.
 
     **Chargers per 1,000 EVs** compares charging supply against actual EV registrations, making it more demand-aware
     than population-only metrics.
@@ -614,7 +614,7 @@ elif page == "Reliability Risk Model":
 
     st.markdown("""
     This model estimates charger reliability risk using verification freshness,
-    data quality, charger power, and connector availability.
+    data quality, charger power and connector availability.
 
     This is a rule-based risk model, not a production-grade ML failure prediction model.
     """)
@@ -685,7 +685,7 @@ elif page == "Queue Simulation Engine":
 
     st.markdown("""
     Simulate estimated waiting time at EV charging stations based on charger capacity,
-    arrival demand, and average charging duration.
+    arrival demand and average charging duration.
     """)
 
     queue_df = ocm_df.copy()
@@ -836,7 +836,7 @@ elif page == "Congestion Risk Analysis":
 
     st.markdown("""
     Estimate EV charging congestion risk using charger power,
-    reliability, and infrastructure availability indicators.
+    reliability and infrastructure availability indicators.
     """)
 
     congestion_df = ocm_df.copy()
@@ -902,7 +902,7 @@ elif page == "Dynamic Pricing Simulator":
 
     st.markdown("""
     Simulate how EV charging prices could change based on charger speed,
-    congestion risk, and reliability.
+    congestion risk and reliability.
     """)
 
     pricing_df = ocm_df.copy()
@@ -963,7 +963,7 @@ elif page == "Charging Cost Simulator":
     st.title("🔋 Charging Cost Simulator")
 
     st.markdown("""
-    Estimate charging session cost based on battery size, charging need, and simulated electricity price.
+    Estimate charging session cost based on battery size, charging need and simulated electricity price.
     """)
 
     col1, col2, col3 = st.columns(3)
@@ -1070,7 +1070,7 @@ elif page == "Fleet Route Upload":
 
     st.markdown("""
     Upload a CSV of fleet routes and estimate EV charging requirements, route risk,
-    charging cost, and charging time across multiple trips.
+    charging cost and charging time across multiple trips.
 
     This is a high-level fleet planning model, not a live route optimizer.
     For exact route maps and charger sequencing, use the Real Route Optimizer.
@@ -1608,7 +1608,7 @@ elif page == "Fleet Route Upload":
     - identifying routes that may need depot charging or schedule changes
 
     This page uses city-level route estimates. A future version could use exact depot addresses,
-    OSRM road routing, live charger availability, depot charging infrastructure, and vehicle telematics.
+    OSRM road routing, live charger availability, depot charging infrastructure and vehicle telematics.
     """)
 
 elif page == "Operator Performance Dashboard":
@@ -1617,7 +1617,7 @@ elif page == "Operator Performance Dashboard":
 
     st.markdown("""
     Benchmark charging operators based on network size, charger speed, ultra-fast coverage,
-    reliability indicators, availability estimates, and amenity quality.
+    reliability indicators, availability estimates and amenity quality.
 
     This view helps identify which operators appear strongest from an infrastructure and user-experience perspective.
     """)
@@ -1915,19 +1915,19 @@ elif page == "Model Assumptions":
     ### Key Assumptions
 
     **1. Reliability Score**  
-    Based on recent verification, data quality, and days since last verified.
+    Based on recent verification, data quality and days since last verified.
 
     **2. Infrastructure Gap Score**  
-    Combines charger density, ultra-fast coverage, and average reliability.
+    Combines charger density, ultra-fast coverage and average reliability.
 
     **3. Congestion Risk Score**  
-    Uses charger power, reliability, and state-level infrastructure availability as proxy inputs.
+    Uses charger power, reliability and state-level infrastructure availability as proxy inputs.
 
     **4. Demand Forecast Model**  
-    Uses estimated EV fleet growth, population share, public charging frequency, and current station count.
+    Uses estimated EV fleet growth, population share, public charging frequency and current station count.
 
     **5. Queue Simulation**  
-    Estimates wait time using arrivals per hour, connector count, and average charging session duration.
+    Estimates wait time using arrivals per hour, connector count and average charging session duration.
 
     **6. Route Intelligence**  
     Uses state-level route corridors, not exact road geometry. Full routing would require a routing API.
@@ -1955,14 +1955,14 @@ elif page == "Fleet & Council Intelligence":
     st.title("🏛️ Fleet & Council Intelligence")
 
     st.markdown("""
-    Strategic EV infrastructure intelligence for councils, fleet managers, and infrastructure planners.
+    Strategic EV infrastructure intelligence for councils, fleet managers and infrastructure planners.
 
-    This page combines EV adoption, charger supply, reliability, demand pressure, and operator benchmarking
+    This page combines EV adoption, charger supply, reliability, demand pressure and operator benchmarking
     to support investment and planning decisions.
     """)
 
     st.caption(
-        "This dashboard uses public charger metadata, AAA/BITRE EV registration-derived inputs, and scenario-based planning assumptions. It is a decision-support prototype, not an official infrastructure forecast."
+        "This dashboard uses public charger metadata, AAA/BITRE EV registration-derived inputs and scenario-based planning assumptions. It is a decision-support prototype, not an official infrastructure forecast."
     )
 
     # -----------------------------------
@@ -2472,11 +2472,11 @@ elif page == "Fleet & Council Intelligence":
     st.markdown("""
     ### How to interpret this page
 
-    **Fleet managers** can use this page to understand charging risk, expected charging demand, and operator network strength.
+    **Fleet managers** can use this page to understand charging risk, expected charging demand and operator network strength.
 
     **Councils** can use this page to identify states or regions where public charging infrastructure may need stronger investment.
 
-    **Charging investors/operators** can use this page to compare demand pressure, infrastructure gaps, and operator performance.
+    **Charging investors/operators** can use this page to compare demand pressure, infrastructure gaps and operator performance.
 
     The current model is state-level. A future B2B version could extend this to LGA, suburb, corridor, or depot-level planning using richer geographic and fleet data.
     """)
@@ -2493,7 +2493,7 @@ elif page == "Route Comparison Mode":
     Compare different EV trip scenarios across weather conditions and charging strategies.
 
     This page provides a high-level planning comparison, not a full charger-by-charger route optimizer.
-    Use it to understand how vehicle choice, weather, strategy, and charging price affect total trip planning.
+    Use it to understand how vehicle choice, weather, strategy and charging price affect total trip planning.
     """)
 
     city_coordinates = {
@@ -2821,7 +2821,7 @@ elif page == "Route Comparison Mode":
     **Route Comparison Mode** estimates how different weather and charging strategies affect a trip.
 
     - **Normal weather** preserves the vehicle's nominal range.
-    - **Cold weather, heavy rain, and extreme heat** reduce estimated usable range.
+    - **Cold weather, heavy rain and extreme heat** reduce estimated usable range.
     - **Fastest Trip** assumes shorter charging sessions and higher effective charging power.
     - **Conservative** assumes a safer battery target.
     - **Fewest Stops** assumes higher charging targets, which may reduce stop count but increase charging time.
@@ -2841,7 +2841,7 @@ elif page == "Demand Forecast Model":
     """)
 
     st.caption(
-        "The forecast uses estimated EV counts, state-level EV growth rates, public charging behaviour assumptions, and current charger infrastructure."
+        "The forecast uses estimated EV counts, state-level EV growth rates, public charging behaviour assumptions and current charger infrastructure."
     )
 
     forecast_df = state_metrics.copy()
@@ -2915,7 +2915,7 @@ elif page == "Demand Forecast Model":
     )
 
     st.caption(
-        "Public charging frequency and charger capacity are adjustable assumptions because actual charging behaviour varies by vehicle type, location, charger speed, and home charging access."
+        "Public charging frequency and charger capacity are adjustable assumptions because actual charging behaviour varies by vehicle type, location, charger speed and home charging access."
     )
 
     forecast_df["state_ev_share"] = (
@@ -3732,7 +3732,7 @@ elif page == "Real Route Optimizer":
             )
 
             st.caption(
-                "Corridor risk uses public charger data, reliability indicators, and simulated availability. It is a planning estimate, not live operational risk."
+                "Corridor risk uses public charger data, reliability indicators and simulated availability. It is a planning estimate, not live operational risk."
             )
 
             st.subheader("Recommended Charging Stops Near Route")
@@ -4163,9 +4163,9 @@ elif page == "Project Insights":
     Growth simulations can highlight which states may need stronger infrastructure investment as EV adoption rises.
 
     **7. Charger trust is a product opportunity.**  
-    Combining reliability, freshness, power, and connector availability can help drivers choose better stations.
+    Combining reliability, freshness, power and connector availability can help drivers choose better stations.
 
     **8. ChargeSense can evolve into a decision-support tool.**  
     Future versions could support charger investment planning, congestion forecasting,
-    live availability, and smart route recommendations.
+    live availability and smart route recommendations.
     """)
