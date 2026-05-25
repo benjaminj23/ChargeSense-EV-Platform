@@ -295,12 +295,17 @@ elif page == "Infrastructure Overview":
 # -----------------------------
 
 elif page == "Infrastructure Gap Analysis":
+
     st.title("🏙️ Infrastructure Gap Analysis")
 
     st.markdown("""
     Identify states that may require stronger EV charging investment based on
-    charger density, ultra-fast charger availability, and reliability.
+    charger density, EV adoption, ultra-fast charger availability, and reliability.
     """)
+
+    st.caption(
+        "Investment priority combines chargers per 1,000 EVs, EV growth rate, charger reliability, and ultra-fast charger coverage."
+    )
 
     gap_view = (
         state_metrics[
@@ -308,6 +313,7 @@ elif page == "Infrastructure Gap Analysis":
                 "state_clean",
                 "population",
                 "estimated_ev_count",
+                "annual_ev_growth_rate",
                 "total_stations",
                 "chargers_per_million",
                 "chargers_per_1000_evs",
@@ -315,33 +321,117 @@ elif page == "Infrastructure Gap Analysis":
                 "ultra_fast_ratio",
                 "avg_reliability",
                 "infrastructure_gap_score",
+                "investment_priority_score",
+                "investment_priority_label"
             ]
         ]
         .dropna(subset=["population"])
-        .sort_values("infrastructure_gap_score", ascending=False)
+        .copy()
     )
 
-    col1, col2, col3 = st.columns(3)
-    highest_gap = gap_view.iloc[0]
+    gap_view = gap_view.sort_values(
+        "investment_priority_score",
+        ascending=False
+    )
 
-    col1.metric("Highest Gap State", highest_gap["state_clean"])
-    col2.metric("Gap Score", round(highest_gap["infrastructure_gap_score"], 1))
-    col3.metric("Chargers / Million", round(highest_gap["chargers_per_million"], 1))
+    highest_gap = gap_view.sort_values(
+        "infrastructure_gap_score",
+        ascending=False
+    ).iloc[0]
 
-    st.subheader("Infrastructure Gap Ranking")
-    st.dataframe(gap_view, use_container_width=True)
+    highest_investment_priority = gap_view.sort_values(
+        "investment_priority_score",
+        ascending=False
+    ).iloc[0]
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    col1.metric(
+        "Highest Gap State",
+        highest_gap["state_clean"]
+    )
+
+    col2.metric(
+        "Gap Score",
+        round(highest_gap["infrastructure_gap_score"], 1)
+    )
+
+    col3.metric(
+        "Chargers / 1,000 EVs",
+        round(highest_gap["chargers_per_1000_evs"], 2)
+    )
+
+    col4.metric(
+        "Top Investment Priority",
+        highest_investment_priority["state_clean"]
+    )
+
+    st.subheader("Infrastructure Gap and Investment Ranking")
+
+    st.dataframe(
+        gap_view,
+        use_container_width=True
+    )
 
     st.subheader("Infrastructure Gap Score by State")
-    st.bar_chart(gap_view.set_index("state_clean")["infrastructure_gap_score"])
 
-    st.subheader("Chargers per Million People")
-    st.bar_chart(gap_view.set_index("state_clean")["chargers_per_million"])
-    st.subheader("Chargers per 1,000 EVs")
-
-    st.bar_chart(
-      gap_view.set_index("state_clean")["chargers_per_1000_evs"]
+    gap_score_view = gap_view.sort_values(
+        "infrastructure_gap_score",
+        ascending=False
     )
 
+    st.bar_chart(
+        gap_score_view.set_index("state_clean")["infrastructure_gap_score"]
+    )
+
+    st.subheader("Investment Priority Score by State")
+
+    investment_view = gap_view.sort_values(
+        "investment_priority_score",
+        ascending=False
+    )
+
+    st.bar_chart(
+        investment_view.set_index("state_clean")["investment_priority_score"]
+    )
+
+    st.subheader("Chargers per Million People")
+
+    chargers_population_view = gap_view.sort_values(
+        "chargers_per_million",
+        ascending=False
+    )
+
+    st.bar_chart(
+        chargers_population_view.set_index("state_clean")["chargers_per_million"]
+    )
+
+    st.subheader("Chargers per 1,000 EVs")
+
+    chargers_ev_view = gap_view.sort_values(
+        "chargers_per_1000_evs",
+        ascending=False
+    )
+
+    st.bar_chart(
+        chargers_ev_view.set_index("state_clean")["chargers_per_1000_evs"]
+    )
+
+    st.markdown("""
+    ### How to interpret this
+
+    **Infrastructure Gap Score** shows where charging infrastructure may be weak relative to population,
+    charger reliability, and ultra-fast charger availability.
+
+    **Chargers per 1,000 EVs** compares charging supply against actual EV registrations, making it more demand-aware
+    than population-only metrics.
+
+    **Investment Priority Score** highlights where infrastructure investment may be most urgent by combining:
+    - low chargers per EV
+    - high EV growth
+    - weaker reliability
+    - low ultra-fast charger coverage
+    """)
 # -----------------------------
 # INTERACTIVE MAP
 # -----------------------------
