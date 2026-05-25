@@ -1,9 +1,9 @@
 
 # ChargeSense: EV Infrastructure Intelligence & Route Planning Platform
 
-ChargeSense is a data-driven EV infrastructure intelligence and route planning prototype for Australia. It combines public EV charger data, EV registration-based market signals, route optimization, demand forecasting, reliability scoring, and fleet/council planning analytics into one interactive Streamlit platform.
+ChargeSense is a data-driven EV infrastructure intelligence and route planning prototype for Australia. It combines public EV charger data, EV registration-based market signals, route optimization, demand forecasting, reliability scoring  fleet/council planning analytics into one interactive Streamlit platform.
 
-The project was built as a portfolio and product analytics case study to explore how data science, geospatial analytics, and product thinking can support EV charging decisions for drivers, fleets, councils, infrastructure planners, and charging operators.
+The project was built as a portfolio and product analytics case study to explore how data science, geospatial analytics  product thinking can support EV charging decisions for drivers, fleets, councils, infrastructure planners  charging operators.
 
 ---
 
@@ -41,22 +41,22 @@ The project was built as a portfolio and product analytics case study to explore
 ## Main Pages
 
 ### Real Route Optimizer
-Plans EV routes using real road routing, EV model profiles, weather-adjusted range, charging strategies, charger recommendations, estimated charging time, estimated cost, corridor risk, and downloadable trip plans.
+Plans EV routes using real road routing, EV model profiles, weather-adjusted range, charging strategies, charger recommendations, estimated charging time, estimated cost, corridor risk  downloadable trip plans.
 
 ### Infrastructure Gap Analysis
-Compares states by charger density, chargers per 1,000 EVs, ultra-fast charger share, reliability, EV growth, and investment priority.
+Compares states by charger density, chargers per 1,000 EVs, ultra-fast charger share, reliability, EV growth  investment priority.
 
 ### Demand Forecast Model
-Forecasts future EV charging pressure using EV fleet growth, public charging assumptions, charger capacity assumptions, and current infrastructure levels.
+Forecasts future EV charging pressure using EV fleet growth, public charging assumptions, charger capacity assumptions  current infrastructure levels.
 
 ### Fleet & Council Intelligence
-A B2B planning dashboard for councils, fleets, and infrastructure planners. It combines investment ranking, demand forecasting, additional station estimates, and operator benchmarking.
+A B2B planning dashboard for councils, fleets  infrastructure planners. It combines investment ranking, demand forecasting, additional station estimates  operator benchmarking.
 
 ### Fleet Route Upload
-Allows fleet managers to upload multiple routes as a CSV and estimate charging stops, charging cost, charging time, trip time, and fleet charging risk.
+Allows fleet managers to upload multiple routes as a CSV and estimate charging stops, charging cost, charging time, trip time  fleet charging risk.
 
 ### Operator Performance Dashboard
-Benchmarks charging operators using public metadata such as station count, average charger power, ultra-fast share, reliability, and operator performance score.
+Benchmarks charging operators using public metadata such as station count, average charger power, ultra-fast share, reliability  operator performance score.
 
 ## Data Sources
 
@@ -71,24 +71,24 @@ Benchmarks charging operators using public metadata such as station count, avera
 ## Methodology
 
 ### Reliability Score
-Reliability is estimated from public charger metadata such as verification status, data freshness, and available quality indicators. It is not confirmed live uptime.
+Reliability is estimated from public charger metadata such as verification status, data freshness  available quality indicators. It is not confirmed live uptime.
 
 ### Simulated Availability
 Availability status is simulated from reliability indicators and data freshness. Future versions could replace this with live operator APIs or OCPI feeds.
 
 ### Amenity Score
-Amenity/rest-stop quality is estimated from station names, addresses, and town fields using keywords such as service centre, shopping centre, 7-Eleven, Woolworths, Coles, McDonald's, Ampol, BP, Shell, cafe, restaurant, and parking.
+Amenity/rest-stop quality is estimated from station names, addresses  town fields using keywords such as service centre, shopping centre, 7-Eleven, Woolworths, Coles, McDonald's, Ampol, BP, Shell, cafe, restaurant  parking.
 
 ### Investment Priority Score
-The investment priority score combines low chargers per EV, EV growth, weaker reliability, and low ultra-fast charger coverage.
+The investment priority score combines low chargers per EV, EV growth, weaker reliability  low ultra-fast charger coverage.
 
 ### Corridor Risk Score
-Corridor risk estimates how risky an EV route is based on chargers near the route, chargers per 100 km, average reliability, and estimated availability.
+Corridor risk estimates how risky an EV route is based on chargers near the route, chargers per 100 km, average reliability  estimated availability.
 
 ### Demand Forecast
-The demand forecast model estimates future EV charging pressure using EV fleet growth, public charging session assumptions, and charger capacity assumptions.
+The demand forecast model estimates future EV charging pressure using EV fleet growth, public charging session assumptions  charger capacity assumptions.
 
-The project uses these sources to estimate charger coverage, reliability, demand pressure, investment priority, and route-level charging risk.
+The project uses these sources to estimate charger coverage, reliability, demand pressure, investment priority  route-level charging risk.
 
 ## Technology Stack
 
@@ -149,6 +149,6 @@ The project uses these sources to estimate charger coverage, reliability, demand
 
 © 2026 Benjamin Joseph. All rights reserved.
 
-This project is provided for portfolio and demonstration purposes. The code, methodology, and project materials may not be copied, redistributed or used commercially without permission.
+This project is provided for portfolio and demonstration purposes. The code, methodology  project materials may not be copied, redistributed or used commercially without permission.
 
 ```text
