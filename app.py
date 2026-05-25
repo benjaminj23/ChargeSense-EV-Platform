@@ -164,6 +164,42 @@ state_metrics["chargers_per_1000_evs"] = (
 
 state_metrics["chargers_per_1000_evs"] = (
     state_metrics["chargers_per_1000_evs"]
+    .replace([float("inf"), -float("inf")], 0)
+    .fillna(0)
+    .round(2)
+)
+
+state_metrics["investment_priority_score"] = (
+    (100 - state_metrics["chargers_per_1000_evs"].clip(upper=100)) * 0.35
+    + state_metrics["annual_ev_growth_rate"].fillna(0).clip(upper=100) * 0.25
+    + (100 - state_metrics["avg_reliability"].fillna(0)) * 0.25
+    + (1 - state_metrics["ultra_fast_ratio"].fillna(0)) * 100 * 0.15
+)
+
+state_metrics["investment_priority_score"] = (
+    state_metrics["investment_priority_score"]
+    .clip(lower=0, upper=100)
+    .round(2)
+)
+
+def investment_priority_label(score):
+    if score >= 70:
+        return "High Priority"
+    elif score >= 40:
+        return "Medium Priority"
+    return "Lower Priority"
+
+state_metrics["investment_priority_label"] = (
+    state_metrics["investment_priority_score"]
+    .apply(investment_priority_label)
+)
+state_metrics["chargers_per_1000_evs"] = (
+    state_metrics["total_stations"]
+    / state_metrics["estimated_ev_count"]
+) * 1000
+
+state_metrics["chargers_per_1000_evs"] = (
+    state_metrics["chargers_per_1000_evs"]
     .round(2)
 )
 # -----------------------------
