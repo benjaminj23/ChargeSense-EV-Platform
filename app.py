@@ -1,3 +1,6 @@
+# ChargeSense EV Infrastructure Intelligence Platform
+# © 2026 Benjamin Joseph. All rights reserved.
+# This code is for portfolio and demonstration purposes only.
 import random
 import math
 import requests
@@ -273,6 +276,7 @@ if page == "Home":
     )
 
     st.link_button("View GitHub Repository", "YOUR_GITHUB_LINK")
+    st.caption("© 2026 Benjamin Joseph. All rights reserved.")
 
 # -----------------------------
 # INFRASTRUCTURE OVERVIEW
