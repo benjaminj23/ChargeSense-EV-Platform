@@ -222,6 +222,7 @@ page = st.sidebar.radio(
         "Infrastructure Gap Analysis",
         "Reliability Intelligence",
         "Reliability Risk Model",
+        "Operator Performance Dashboard",
         "Charger Recommendation",
         "Real Route Optimizer",
         "Demand Forecast Model",
@@ -1057,294 +1058,296 @@ elif page == "Availability Stress Test":
         use_container_width=True,
     )
 
+elif page == "Operator Performance Dashboard":
 
-# -----------------------------
-# CHARGER DESERT DETECTOR
-# -----------------------------
-
-elif page == "Charger Desert Detector":
-    st.title("🏜️ Charger Desert Detector")
+    st.title("🏢 Operator Performance Dashboard")
 
     st.markdown("""
-    Identify regions that may be underserved by EV charging infrastructure.
-    This version uses charger density, ultra-fast coverage, and reliability as proxy indicators.
+    Benchmark charging operators based on network size, charger speed, ultra-fast coverage,
+    reliability indicators, availability estimates, and amenity quality.
+
+    This view helps identify which operators appear strongest from an infrastructure and user-experience perspective.
     """)
 
     st.caption(
-        "Note: Desert scores use available public dataset quality, charger density, ultra-fast coverage, and reliability proxies. Scores indicate relative undersupply risk, not confirmed infrastructure failure."
+        "Operator names are estimated from station names using keyword matching. Scores are based on available public metadata, not confirmed operator-provided performance data."
     )
 
-    desert_df = state_metrics.copy().dropna(subset=["population"])
+    operator_df = ocm_df.copy()
 
-    desert_df["desert_score"] = (
-        (100 - desert_df["chargers_per_million"].clip(upper=100)) * 0.5
-        + (1 - desert_df["ultra_fast_ratio"]) * 100 * 0.3
-        + (100 - desert_df["avg_reliability"]) * 0.2
+    operator_df["max_power_kw"] = pd.to_numeric(
+        operator_df["max_power_kw"],
+        errors="coerce"
     )
 
-    desert_df["desert_score"] = (
-        desert_df["desert_score"].clip(lower=0, upper=100).round(2)
+    operator_df["reliability_score"] = pd.to_numeric(
+        operator_df["reliability_score"],
+        errors="coerce"
     )
 
-    def desert_label(score):
-        if score >= 70:
-            return "High Undersupply"
-        elif score >= 40:
-            return "Moderate Undersupply"
-        return "Lower Undersupply"
+    def identify_operator(station_name):
+        name = str(station_name).lower()
 
-    desert_df["desert_label"] = desert_df["desert_score"].apply(desert_label)
+        if "tesla" in name:
+            return "Tesla"
+        elif "chargefox" in name:
+            return "Chargefox"
+        elif "evie" in name:
+            return "Evie"
+        elif "nrma" in name:
+            return "NRMA"
+        elif "ampol" in name:
+            return "Ampol"
+        elif "shell" in name:
+            return "Shell Recharge"
+        elif "bp" in name:
+            return "BP Pulse"
+        elif "jolt" in name:
+            return "JOLT"
+        elif "chargepoint" in name:
+            return "ChargePoint"
+        elif "racv" in name:
+            return "RACV"
+        elif "woolworths" in name:
+            return "Woolworths"
+        elif "7-eleven" in name or "7 eleven" in name:
+            return "7-Eleven"
+        else:
+            return "Other / Unknown"
 
-    desert_df = desert_df.sort_values("desert_score", ascending=False)
+    def operator_availability(row):
+        reliability = row.get("reliability_score", 0)
 
-    col1, col2, col3 = st.columns(3)
+        if reliability >= 70:
+            return "Available"
+        elif reliability >= 40:
+            return "Busy"
+        elif reliability > 0:
+            return "Unknown"
+        else:
+            return "Offline"
 
-    col1.metric("Highest Desert Risk", desert_df.iloc[0]["state_clean"])
-    col2.metric("Desert Score", round(desert_df.iloc[0]["desert_score"], 1))
-    col3.metric("Chargers / Million", round(desert_df.iloc[0]["chargers_per_million"], 1))
-
-    st.subheader("Charger Desert Ranking")
-
-    st.dataframe(
-        desert_df[
+    def operator_amenity_score(row):
+        text = " ".join(
             [
-                "state_clean",
-                "population",
-                "total_stations",
-                "chargers_per_million",
-                "ultra_fast_ratio",
-                "avg_reliability",
-                "desert_score",
-                "desert_label",
+                str(row.get("station_name", "")),
+                str(row.get("address", "")),
+                str(row.get("town", ""))
             ]
-        ],
-        use_container_width=True,
-    )
+        ).lower()
 
-    st.subheader("Charger Desert Score by State")
-    st.bar_chart(desert_df.set_index("state_clean")["desert_score"])
-
-# -----------------------------
-# PEAK SURGE SIMULATOR
-# -----------------------------
-
-elif page == "Peak Surge Simulator":
-    st.title("🏖️ Peak Holiday Surge Simulator")
-
-    st.markdown("""
-    Simulate how holiday or long-weekend travel surges could increase charging pressure.
-    """)
-
-    surge_df = ocm_df.copy()
-
-    selected_surge_state = st.selectbox(
-        "Select State",
-        sorted(surge_df["state_clean"].dropna().unique()),
-        key="surge_state",
-    )
-
-    travel_surge = st.slider("Travel Demand Surge (%)", 0, 300, 100)
-
-    avg_session_minutes = st.slider("Average Charging Session Duration", 10, 90, 35)
-
-    surge_state_df = surge_df[surge_df["state_clean"] == selected_surge_state].copy()
-
-    surge_state_df["total_connector_quantity"] = pd.to_numeric(
-        surge_state_df["total_connector_quantity"], errors="coerce"
-    ).fillna(1)
-
-    surge_state_df["hourly_capacity"] = surge_state_df["total_connector_quantity"] * (
-        60 / avg_session_minutes
-    )
-
-    base_arrivals = 10
-
-    surge_state_df["surge_arrivals_per_hour"] = base_arrivals * (
-        1 + travel_surge / 100
-    )
-
-    surge_state_df["surge_pressure_ratio"] = (
-        surge_state_df["surge_arrivals_per_hour"]
-        / surge_state_df["hourly_capacity"].replace(0, 1)
-    )
-
-    surge_state_df["estimated_surge_wait"] = (
-        (surge_state_df["surge_pressure_ratio"] - 1).clip(lower=0)
-        * avg_session_minutes
-    ).round(1)
-
-    col1, col2, col3 = st.columns(3)
-
-    col1.metric("Stations Simulated", len(surge_state_df))
-    col2.metric("Avg Surge Wait", round(surge_state_df["estimated_surge_wait"].mean(), 1))
-    col3.metric("Max Surge Wait", round(surge_state_df["estimated_surge_wait"].max(), 1))
-
-    st.subheader("Stations Most Exposed to Holiday Surge")
-
-    st.dataframe(
-        surge_state_df[
-            [
-                "station_name",
-                "town",
-                "state_clean",
-                "total_connector_quantity",
-                "hourly_capacity",
-                "surge_arrivals_per_hour",
-                "estimated_surge_wait",
-                "reliability_score",
-            ]
+        high_amenity_keywords = [
+            "service centre",
+            "service center",
+            "shopping centre",
+            "shopping center",
+            "7-eleven",
+            "7 eleven",
+            "woolworths",
+            "coles",
+            "mcdonald",
+            "kfc",
+            "hungry jack",
+            "ampol",
+            "bp",
+            "shell",
+            "caltex",
+            "airport"
         ]
-        .sort_values("estimated_surge_wait", ascending=False)
-        .head(25),
-        use_container_width=True,
+
+        medium_amenity_keywords = [
+            "car park",
+            "parking",
+            "hotel",
+            "motel",
+            "club",
+            "cafe",
+            "restaurant",
+            "mall",
+            "plaza",
+            "visitor centre",
+            "visitor center"
+        ]
+
+        score = 0
+
+        for keyword in high_amenity_keywords:
+            if keyword in text:
+                score += 30
+
+        for keyword in medium_amenity_keywords:
+            if keyword in text:
+                score += 15
+
+        return min(score, 100)
+
+    operator_df["operator"] = operator_df["station_name"].apply(
+        identify_operator
     )
 
-    st.subheader("Holiday Surge Wait Distribution")
-
-    st.bar_chart(
-        surge_state_df.sort_values("estimated_surge_wait", ascending=False)
-        .head(20)
-        .set_index("station_name")["estimated_surge_wait"]
+    operator_df["availability_status"] = operator_df.apply(
+        operator_availability,
+        axis=1
     )
 
-elif page == "Demand Forecast Model":
+    availability_weight = {
+        "Available": 100,
+        "Busy": 30,
+        "Unknown": 0,
+        "Offline": -200
+    }
 
-    st.title("📊 Demand Forecast Model")
-
-    st.markdown("""
-    Forecast future EV charging pressure using estimated EV fleet growth,
-    charging frequency assumptions, and current charging infrastructure.
-    
-    This is a scenario-based demand model, not a production-grade time-series model.
-    """)
-
-    current_ev_fleet = st.number_input(
-        "Estimated Current Australian EV Fleet",
-        min_value=100000,
-        max_value=2000000,
-        value=410000,
-        step=10000
+    operator_df["availability_score"] = (
+        operator_df["availability_status"].map(availability_weight)
     )
 
-    annual_growth_rate = st.slider(
-        "Annual EV Fleet Growth Rate (%)",
-        5,
-        80,
-        30
+    operator_df["amenity_score"] = operator_df.apply(
+        operator_amenity_score,
+        axis=1
     )
 
-    forecast_years = st.slider(
-        "Forecast Horizon (Years)",
-        1,
-        5,
-        3
+    operator_df["is_ultra_fast"] = (
+        operator_df["max_power_kw"].fillna(0) >= 250
     )
 
-    public_charges_per_ev_month = st.slider(
-        "Average Public Charges per EV per Month",
-        1,
-        20,
-        4
+    operator_summary = (
+        operator_df
+        .groupby("operator")
+        .agg(
+            station_count=("station_name", "count"),
+            avg_power_kw=("max_power_kw", "mean"),
+            max_power_kw=("max_power_kw", "max"),
+            avg_reliability=("reliability_score", "mean"),
+            avg_availability_score=("availability_score", "mean"),
+            avg_amenity_score=("amenity_score", "mean"),
+            ultra_fast_sites=("is_ultra_fast", "sum")
+        )
+        .reset_index()
     )
 
-    forecast_df = state_metrics.copy()
-    forecast_df = forecast_df.dropna(subset=["population"])
-
-    total_population = forecast_df["population"].sum()
-
-    forecast_df["population_share"] = (
-        forecast_df["population"] / total_population
+    operator_summary["ultra_fast_share"] = (
+        operator_summary["ultra_fast_sites"]
+        / operator_summary["station_count"]
     )
 
-    forecast_df["estimated_current_evs"] = (
-        current_ev_fleet * forecast_df["population_share"]
+    operator_summary["operator_performance_score"] = (
+        operator_summary["station_count"].rank(pct=True) * 25
+        + operator_summary["avg_power_kw"].fillna(0).rank(pct=True) * 25
+        + operator_summary["avg_reliability"].fillna(0).rank(pct=True) * 20
+        + operator_summary["ultra_fast_share"].fillna(0).rank(pct=True) * 20
+        + operator_summary["avg_amenity_score"].fillna(0).rank(pct=True) * 10
     )
 
-    forecast_df["forecast_evs"] = (
-        forecast_df["estimated_current_evs"]
-        * ((1 + annual_growth_rate / 100) ** forecast_years)
+    operator_summary["operator_performance_score"] = (
+        operator_summary["operator_performance_score"]
+        .clip(lower=0, upper=100)
+        .round(2)
     )
 
-    forecast_df["monthly_public_sessions"] = (
-        forecast_df["forecast_evs"]
-        * public_charges_per_ev_month
+    def operator_label(score):
+        if score >= 75:
+            return "Strong Network"
+        elif score >= 50:
+            return "Developing Network"
+        return "Limited / Emerging Network"
+
+    operator_summary["operator_label"] = (
+        operator_summary["operator_performance_score"]
+        .apply(operator_label)
     )
 
-    forecast_df["sessions_per_station_month"] = (
-        forecast_df["monthly_public_sessions"]
-        / forecast_df["total_stations"]
-    )
-
-    forecast_df["demand_pressure_index"] = (
-        forecast_df["sessions_per_station_month"]
-        / forecast_df["sessions_per_station_month"].max()
-        * 100
-    ).round(2)
-
-    def demand_label(score):
-        if score >= 70:
-            return "High Future Pressure"
-        elif score >= 40:
-            return "Moderate Future Pressure"
-        return "Lower Future Pressure"
-
-    forecast_df["demand_pressure_label"] = (
-        forecast_df["demand_pressure_index"]
-        .apply(demand_label)
-    )
-
-    forecast_df = forecast_df.sort_values(
-        "demand_pressure_index",
+    operator_summary = operator_summary.sort_values(
+        "operator_performance_score",
         ascending=False
     )
+
+    top_operator = operator_summary.iloc[0]
+    largest_operator = operator_summary.sort_values(
+        "station_count",
+        ascending=False
+    ).iloc[0]
+
+    fastest_operator = operator_summary.sort_values(
+        "avg_power_kw",
+        ascending=False
+    ).iloc[0]
 
     col1, col2, col3 = st.columns(3)
 
     col1.metric(
-        "Forecast National EV Fleet",
-        f"{int(forecast_df['forecast_evs'].sum()):,}"
+        "Top Overall Operator",
+        top_operator["operator"]
     )
 
     col2.metric(
-        "Highest Pressure State",
-        forecast_df.iloc[0]["state_clean"]
+        "Largest Network",
+        largest_operator["operator"]
     )
 
     col3.metric(
-        "Highest Pressure Index",
-        round(forecast_df.iloc[0]["demand_pressure_index"], 1)
+        "Highest Avg Power",
+        fastest_operator["operator"]
     )
 
-    st.subheader("Forecast Demand Pressure by State")
+    st.subheader("Operator Performance Ranking")
 
     st.dataframe(
-        forecast_df[
+        operator_summary[
             [
-                "state_clean",
-                "population",
-                "total_stations",
-                "estimated_current_evs",
-                "forecast_evs",
-                "monthly_public_sessions",
-                "sessions_per_station_month",
-                "demand_pressure_index",
-                "demand_pressure_label"
+                "operator",
+                "station_count",
+                "avg_power_kw",
+                "max_power_kw",
+                "ultra_fast_sites",
+                "ultra_fast_share",
+                "avg_reliability",
+                "avg_availability_score",
+                "avg_amenity_score",
+                "operator_performance_score",
+                "operator_label"
             ]
         ],
         use_container_width=True
     )
 
-    st.subheader("Demand Pressure Index")
+    st.subheader("Operator Performance Score")
 
-    st.bar_chart(
-        forecast_df.set_index("state_clean")["demand_pressure_index"]
-    )
+    score_chart = operator_summary.set_index("operator")[
+        "operator_performance_score"
+    ]
 
-    st.subheader("Forecast EV Fleet by State")
+    st.bar_chart(score_chart)
 
-    st.bar_chart(
-        forecast_df.set_index("state_clean")["forecast_evs"]
-    )
+    st.subheader("Station Count by Operator")
+
+    count_chart = operator_summary.sort_values(
+        "station_count",
+        ascending=False
+    ).set_index("operator")["station_count"]
+
+    st.bar_chart(count_chart)
+
+    st.subheader("Average Charger Power by Operator")
+
+    power_chart = operator_summary.sort_values(
+        "avg_power_kw",
+        ascending=False
+    ).set_index("operator")["avg_power_kw"]
+
+    st.bar_chart(power_chart)
+
+    st.markdown("""
+    ### How to interpret this
+
+    **Operator Performance Score** is a benchmark score combining:
+    - network size
+    - average charger power
+    - ultra-fast charger share
+    - reliability indicators
+    - amenity score
+
+    This is not an official operator ranking. It is a prototype benchmark using public charger metadata.
+    """)
 
 elif page == "Model Assumptions":
 
