@@ -225,6 +225,7 @@ page = st.sidebar.radio(
         "Operator Performance Dashboard",
         "Charger Recommendation",
         "Real Route Optimizer",
+        "Route Comparison Mode",
         "Demand Forecast Model",
         "Queue Simulation Engine",
         "Reservation Simulation",
@@ -1395,6 +1396,352 @@ elif page == "Model Assumptions":
     - Add suburb/LGA-level population and EV registration data
     - Train models on historical failure and usage records
     """)
+
+elif page == "Route Comparison Mode":
+
+    st.title("🧭 Route Comparison Mode")
+
+    st.markdown("""
+    Compare different EV trip scenarios across weather conditions and charging strategies.
+
+    This page provides a high-level planning comparison, not a full charger-by-charger route optimizer.
+    Use it to understand how vehicle choice, weather, strategy, and charging price affect total trip planning.
+    """)
+
+    city_coordinates = {
+        "Sydney": [151.2093, -33.8688],
+        "Melbourne": [144.9631, -37.8136],
+        "Brisbane": [153.0251, -27.4698],
+        "Adelaide": [138.6007, -34.9285],
+        "Perth": [115.8605, -31.9505],
+        "Canberra": [149.1300, -35.2809],
+        "Hobart": [147.3272, -42.8821],
+        "Darwin": [130.8456, -12.4634],
+        "Gold Coast": [153.4000, -28.0167],
+        "Newcastle": [151.7817, -32.9283],
+        "Wollongong": [150.8931, -34.4278],
+        "Geelong": [144.3617, -38.1499]
+    }
+
+    ev_profiles = {
+        "Tesla Model 3 RWD": {"battery_kwh": 60, "range_km": 513},
+        "Tesla Model Y RWD": {"battery_kwh": 60, "range_km": 455},
+        "BYD Atto 3": {"battery_kwh": 60.5, "range_km": 420},
+        "BYD Seal": {"battery_kwh": 82.5, "range_km": 570},
+        "Kia EV6": {"battery_kwh": 77.4, "range_km": 528},
+        "Hyundai Ioniq 5": {"battery_kwh": 77.4, "range_km": 507},
+        "MG4 Excite 51": {"battery_kwh": 51, "range_km": 350}
+    }
+
+    weather_multipliers = {
+        "Normal": 1.0,
+        "Cold Weather": 0.82,
+        "Heavy Rain": 0.88,
+        "Extreme Heat": 0.90
+    }
+
+    strategy_targets = {
+        "Conservative": 80,
+        "Fastest Trip": 60,
+        "Fewest Stops": 90
+    }
+
+    def haversine_distance_simple(lat1, lon1, lat2, lon2):
+        import math
+
+        radius_km = 6371
+
+        lat1 = math.radians(lat1)
+        lon1 = math.radians(lon1)
+        lat2 = math.radians(lat2)
+        lon2 = math.radians(lon2)
+
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+
+        a = (
+            math.sin(dlat / 2) ** 2
+            + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        )
+
+        c = 2 * math.asin(math.sqrt(a))
+
+        return radius_km * c
+
+    st.subheader("Route Inputs")
+
+    cities = sorted(city_coordinates.keys())
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        start_city = st.selectbox(
+            "Start City",
+            cities,
+            index=cities.index("Sydney")
+        )
+
+    with col2:
+        destination_city = st.selectbox(
+            "Destination City",
+            cities,
+            index=cities.index("Melbourne")
+        )
+
+    if start_city == destination_city:
+        st.warning("Start city and destination city cannot be the same.")
+        st.stop()
+
+    start_coords = city_coordinates[start_city]
+    end_coords = city_coordinates[destination_city]
+
+    straight_line_distance = haversine_distance_simple(
+        start_coords[1],
+        start_coords[0],
+        end_coords[1],
+        end_coords[0]
+    )
+
+    estimated_route_distance_km = straight_line_distance * 1.25
+
+    estimated_drive_time_hours = estimated_route_distance_km / 85
+
+    st.caption(
+        "This comparison mode estimates route distance using city coordinates and a road-distance adjustment. "
+        "Use Real Route Optimizer for exact OSRM road routing."
+    )
+
+    st.subheader("Scenario Settings")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        selected_ev = st.selectbox(
+            "EV Model",
+            list(ev_profiles.keys())
+        )
+
+    with col2:
+        starting_battery_percent = st.slider(
+            "Starting Battery (%)",
+            20,
+            100,
+            90
+        )
+
+    with col3:
+        minimum_arrival_percent = st.slider(
+            "Minimum Arrival Battery (%)",
+            5,
+            50,
+            20
+        )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        safety_buffer_km = st.slider(
+            "Safety Buffer (km)",
+            20,
+            100,
+            50
+        )
+
+    with col2:
+        electricity_price_per_kwh = st.slider(
+            "Charging Price ($/kWh)",
+            0.20,
+            1.20,
+            0.65,
+            0.05
+        )
+
+    battery_kwh = ev_profiles[selected_ev]["battery_kwh"]
+    base_range_km = ev_profiles[selected_ev]["range_km"]
+
+    st.subheader("Scenario Comparison")
+
+    comparison_rows = []
+
+    for weather_name, weather_multiplier in weather_multipliers.items():
+
+        adjusted_range_km = base_range_km * weather_multiplier
+
+        usable_start_range_km = adjusted_range_km * (
+            starting_battery_percent / 100
+        )
+
+        for strategy_name, target_battery_percent in strategy_targets.items():
+
+            usable_after_charge_range_km = adjusted_range_km * (
+                (target_battery_percent - minimum_arrival_percent) / 100
+            )
+
+            safe_start_range_km = max(
+                usable_start_range_km - safety_buffer_km,
+                1
+            )
+
+            safe_after_charge_range_km = max(
+                usable_after_charge_range_km - safety_buffer_km,
+                1
+            )
+
+            if estimated_route_distance_km <= safe_start_range_km:
+                estimated_stops = 0
+            else:
+                remaining_distance = (
+                    estimated_route_distance_km - safe_start_range_km
+                )
+
+                estimated_stops = int(
+                    math.ceil(remaining_distance / safe_after_charge_range_km)
+                )
+
+            average_arrival_percent = minimum_arrival_percent
+
+            charge_needed_percent = max(
+                target_battery_percent - average_arrival_percent,
+                0
+            )
+
+            estimated_energy_per_stop_kwh = (
+                battery_kwh * charge_needed_percent / 100
+            )
+
+            total_energy_added_kwh = (
+                estimated_energy_per_stop_kwh * estimated_stops
+            )
+
+            estimated_cost_aud = (
+                total_energy_added_kwh * electricity_price_per_kwh
+            )
+
+            if strategy_name == "Fastest Trip":
+                assumed_effective_power_kw = 220
+            elif strategy_name == "Conservative":
+                assumed_effective_power_kw = 160
+            else:
+                assumed_effective_power_kw = 140
+
+            estimated_charging_time_min = (
+                total_energy_added_kwh / assumed_effective_power_kw
+            ) * 60
+
+            total_trip_time_hours = (
+                estimated_drive_time_hours
+                + estimated_charging_time_min / 60
+            )
+
+            comparison_rows.append({
+                "weather": weather_name,
+                "strategy": strategy_name,
+                "adjusted_range_km": round(adjusted_range_km, 1),
+                "estimated_stops": estimated_stops,
+                "estimated_energy_added_kwh": round(total_energy_added_kwh, 1),
+                "estimated_charging_time_min": round(estimated_charging_time_min, 1),
+                "estimated_cost_aud": round(estimated_cost_aud, 2),
+                "estimated_total_trip_time_hrs": round(total_trip_time_hours, 2)
+            })
+
+    comparison_df = pd.DataFrame(comparison_rows)
+
+    best_time_row = comparison_df.sort_values(
+        "estimated_total_trip_time_hrs",
+        ascending=True
+    ).iloc[0]
+
+    cheapest_row = comparison_df.sort_values(
+        "estimated_cost_aud",
+        ascending=True
+    ).iloc[0]
+
+    fewest_stops_row = comparison_df.sort_values(
+        "estimated_stops",
+        ascending=True
+    ).iloc[0]
+
+    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+
+    metric_col1.metric(
+        "Estimated Route Distance",
+        f"{round(estimated_route_distance_km, 1)} km"
+    )
+
+    metric_col2.metric(
+        "Fastest Scenario",
+        f"{best_time_row['weather']} / {best_time_row['strategy']}"
+    )
+
+    metric_col3.metric(
+        "Cheapest Scenario",
+        f"{cheapest_row['weather']} / {cheapest_row['strategy']}"
+    )
+
+    metric_col4.metric(
+        "Fewest Stops Scenario",
+        f"{fewest_stops_row['weather']} / {fewest_stops_row['strategy']}"
+    )
+
+    st.dataframe(
+        comparison_df.sort_values(
+            "estimated_total_trip_time_hrs",
+            ascending=True
+        ),
+        use_container_width=True
+    )
+
+    st.subheader("Total Trip Time by Scenario")
+
+    time_chart = comparison_df.copy()
+
+    time_chart["scenario"] = (
+        time_chart["weather"] + " | " + time_chart["strategy"]
+    )
+
+    st.bar_chart(
+        time_chart.set_index("scenario")["estimated_total_trip_time_hrs"]
+    )
+
+    st.subheader("Estimated Charging Cost by Scenario")
+
+    cost_chart = comparison_df.copy()
+
+    cost_chart["scenario"] = (
+        cost_chart["weather"] + " | " + cost_chart["strategy"]
+    )
+
+    st.bar_chart(
+        cost_chart.set_index("scenario")["estimated_cost_aud"]
+    )
+
+    st.subheader("Estimated Stops by Scenario")
+
+    stops_chart = comparison_df.copy()
+
+    stops_chart["scenario"] = (
+        stops_chart["weather"] + " | " + stops_chart["strategy"]
+    )
+
+    st.bar_chart(
+        stops_chart.set_index("scenario")["estimated_stops"]
+    )
+
+    st.markdown("""
+    ### How to interpret this
+
+    **Route Comparison Mode** estimates how different weather and charging strategies affect a trip.
+
+    - **Normal weather** preserves the vehicle's nominal range.
+    - **Cold weather, heavy rain, and extreme heat** reduce estimated usable range.
+    - **Fastest Trip** assumes shorter charging sessions and higher effective charging power.
+    - **Conservative** assumes a safer battery target.
+    - **Fewest Stops** assumes higher charging targets, which may reduce stop count but increase charging time.
+
+    This is a scenario comparison tool, not a replacement for the full Real Route Optimizer.
+    """)
+
+
 elif page == "Real Route Optimizer":
 
     st.title("🛰️ Real Route Optimizer")
