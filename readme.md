@@ -145,7 +145,6 @@ The project uses these sources to estimate charger coverage, reliability, demand
 - Council and fleet B2B reporting platform
 - PostgreSQL database and FastAPI backend
 
-- 
 ## Copyright
 
 © 2026 Benjamin Joseph. All rights reserved.
