@@ -230,6 +230,7 @@ page = st.sidebar.radio(
         "Route Comparison Mode",
         "Demand Forecast Model",
         "Fleet & Council Intelligence",
+        "Fleet Route Upload",
         "Queue Simulation Engine",
         "Reservation Simulation",
         "Charging Cost Simulator",
@@ -1061,6 +1062,554 @@ elif page == "Availability Stress Test":
         .head(25),
         use_container_width=True,
     )
+
+
+elif page == "Fleet Route Upload":
+
+    st.title("🚚 Fleet Route Upload")
+
+    st.markdown("""
+    Upload a CSV of fleet routes and estimate EV charging requirements, route risk,
+    charging cost, and charging time across multiple trips.
+
+    This is a high-level fleet planning model, not a live route optimizer.
+    For exact route maps and charger sequencing, use the Real Route Optimizer.
+    """)
+
+    st.caption(
+        "This page is designed for fleet managers who need to quickly assess many routes at once."
+    )
+
+    city_coordinates = {
+        "Sydney": [151.2093, -33.8688],
+        "Melbourne": [144.9631, -37.8136],
+        "Brisbane": [153.0251, -27.4698],
+        "Adelaide": [138.6007, -34.9285],
+        "Perth": [115.8605, -31.9505],
+        "Canberra": [149.1300, -35.2809],
+        "Hobart": [147.3272, -42.8821],
+        "Darwin": [130.8456, -12.4634],
+        "Gold Coast": [153.4000, -28.0167],
+        "Newcastle": [151.7817, -32.9283],
+        "Wollongong": [150.8931, -34.4278],
+        "Geelong": [144.3617, -38.1499]
+    }
+
+    ev_profiles = {
+        "Tesla Model 3 RWD": {"battery_kwh": 60, "range_km": 513},
+        "Tesla Model Y RWD": {"battery_kwh": 60, "range_km": 455},
+        "BYD Atto 3": {"battery_kwh": 60.5, "range_km": 420},
+        "BYD Seal": {"battery_kwh": 82.5, "range_km": 570},
+        "Kia EV6": {"battery_kwh": 77.4, "range_km": 528},
+        "Hyundai Ioniq 5": {"battery_kwh": 77.4, "range_km": 507},
+        "MG4 Excite 51": {"battery_kwh": 51, "range_km": 350}
+    }
+
+    weather_multipliers = {
+        "Normal": 1.0,
+        "Cold Weather": 0.82,
+        "Heavy Rain": 0.88,
+        "Extreme Heat": 0.90
+    }
+
+    strategy_targets = {
+        "Conservative": 80,
+        "Fastest Trip": 60,
+        "Fewest Stops": 90
+    }
+
+    def fleet_haversine_distance(lat1, lon1, lat2, lon2):
+        radius_km = 6371
+
+        lat1 = math.radians(lat1)
+        lon1 = math.radians(lon1)
+        lat2 = math.radians(lat2)
+        lon2 = math.radians(lon2)
+
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+
+        a = (
+            math.sin(dlat / 2) ** 2
+            + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        )
+
+        c = 2 * math.asin(math.sqrt(a))
+
+        return radius_km * c
+
+    st.subheader("CSV Format")
+
+    st.markdown("""
+    Your CSV should contain these columns:
+
+    ```csv
+    route_id,start_city,destination_city,ev_model,starting_battery_percent,weather,strategy
+    R001,Sydney,Melbourne,Tesla Model Y RWD,90,Normal,Conservative
+    R002,Sydney,Canberra,BYD Atto 3,80,Cold Weather,Fastest Trip
+    R003,Melbourne,Geelong,Kia EV6,75,Heavy Rain,Fewest Stops
+    ```
+    """)
+
+    sample_fleet_routes = pd.DataFrame(
+        [
+            {
+                "route_id": "R001",
+                "start_city": "Sydney",
+                "destination_city": "Melbourne",
+                "ev_model": "Tesla Model Y RWD",
+                "starting_battery_percent": 90,
+                "weather": "Normal",
+                "strategy": "Conservative"
+            },
+            {
+                "route_id": "R002",
+                "start_city": "Sydney",
+                "destination_city": "Canberra",
+                "ev_model": "BYD Atto 3",
+                "starting_battery_percent": 80,
+                "weather": "Cold Weather",
+                "strategy": "Fastest Trip"
+            },
+            {
+                "route_id": "R003",
+                "start_city": "Melbourne",
+                "destination_city": "Geelong",
+                "ev_model": "Kia EV6",
+                "starting_battery_percent": 75,
+                "weather": "Heavy Rain",
+                "strategy": "Fewest Stops"
+            }
+        ]
+    )
+
+    sample_csv = sample_fleet_routes.to_csv(index=False)
+
+    st.download_button(
+        "Download Sample Fleet Route CSV",
+        sample_csv,
+        file_name="chargesense_sample_fleet_routes.csv",
+        mime="text/csv"
+    )
+
+    uploaded_file = st.file_uploader(
+        "Upload Fleet Route CSV",
+        type=["csv"]
+    )
+
+    st.subheader("Fleet Planning Assumptions")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        minimum_arrival_percent = st.slider(
+            "Minimum Arrival Battery (%)",
+            5,
+            50,
+            20
+        )
+
+    with col2:
+        safety_buffer_km = st.slider(
+            "Safety Buffer (km)",
+            20,
+            100,
+            50
+        )
+
+    with col3:
+        electricity_price_per_kwh = st.slider(
+            "Charging Price ($/kWh)",
+            0.20,
+            1.20,
+            0.65,
+            0.05
+        )
+
+    if uploaded_file is not None:
+
+        fleet_df = pd.read_csv(uploaded_file)
+
+        required_columns = [
+            "route_id",
+            "start_city",
+            "destination_city",
+            "ev_model",
+            "starting_battery_percent",
+            "weather",
+            "strategy"
+        ]
+
+        missing_columns = [
+            col for col in required_columns
+            if col not in fleet_df.columns
+        ]
+
+        if len(missing_columns) > 0:
+            st.error(
+                "Missing required columns: "
+                + ", ".join(missing_columns)
+            )
+            st.stop()
+
+        results = []
+
+        for _, row in fleet_df.iterrows():
+
+            route_id = row["route_id"]
+            start_city = str(row["start_city"]).strip()
+            destination_city = str(row["destination_city"]).strip()
+            ev_model = str(row["ev_model"]).strip()
+            weather = str(row["weather"]).strip()
+            strategy = str(row["strategy"]).strip()
+
+            try:
+                starting_battery_percent = float(
+                    row["starting_battery_percent"]
+                )
+            except:
+                starting_battery_percent = 90
+
+            if start_city not in city_coordinates:
+                results.append({
+                    "route_id": route_id,
+                    "status": "Invalid start city",
+                    "start_city": start_city,
+                    "destination_city": destination_city
+                })
+                continue
+
+            if destination_city not in city_coordinates:
+                results.append({
+                    "route_id": route_id,
+                    "status": "Invalid destination city",
+                    "start_city": start_city,
+                    "destination_city": destination_city
+                })
+                continue
+
+            if ev_model not in ev_profiles:
+                results.append({
+                    "route_id": route_id,
+                    "status": "Invalid EV model",
+                    "start_city": start_city,
+                    "destination_city": destination_city
+                })
+                continue
+
+            if weather not in weather_multipliers:
+                weather = "Normal"
+
+            if strategy not in strategy_targets:
+                strategy = "Conservative"
+
+            start_coords = city_coordinates[start_city]
+            end_coords = city_coordinates[destination_city]
+
+            straight_line_distance = fleet_haversine_distance(
+                start_coords[1],
+                start_coords[0],
+                end_coords[1],
+                end_coords[0]
+            )
+
+            estimated_route_distance_km = straight_line_distance * 1.25
+
+            estimated_drive_time_hours = (
+                estimated_route_distance_km / 85
+            )
+
+            battery_kwh = ev_profiles[ev_model]["battery_kwh"]
+            base_range_km = ev_profiles[ev_model]["range_km"]
+
+            adjusted_range_km = (
+                base_range_km * weather_multipliers[weather]
+            )
+
+            target_battery_percent = strategy_targets[strategy]
+
+            usable_start_range_km = adjusted_range_km * (
+                starting_battery_percent / 100
+            )
+
+            usable_after_charge_range_km = adjusted_range_km * (
+                (target_battery_percent - minimum_arrival_percent) / 100
+            )
+
+            safe_start_range_km = max(
+                usable_start_range_km - safety_buffer_km,
+                1
+            )
+
+            safe_after_charge_range_km = max(
+                usable_after_charge_range_km - safety_buffer_km,
+                1
+            )
+
+            if estimated_route_distance_km <= safe_start_range_km:
+                estimated_stops = 0
+            else:
+                remaining_distance = (
+                    estimated_route_distance_km - safe_start_range_km
+                )
+
+                estimated_stops = int(
+                    math.ceil(
+                        remaining_distance / safe_after_charge_range_km
+                    )
+                )
+
+            charge_needed_percent = max(
+                target_battery_percent - minimum_arrival_percent,
+                0
+            )
+
+            estimated_energy_per_stop_kwh = (
+                battery_kwh * charge_needed_percent / 100
+            )
+
+            total_energy_added_kwh = (
+                estimated_energy_per_stop_kwh * estimated_stops
+            )
+
+            estimated_charging_cost_aud = (
+                total_energy_added_kwh * electricity_price_per_kwh
+            )
+
+            if strategy == "Fastest Trip":
+                assumed_effective_power_kw = 220
+            elif strategy == "Conservative":
+                assumed_effective_power_kw = 160
+            else:
+                assumed_effective_power_kw = 140
+
+            estimated_charging_time_min = (
+                total_energy_added_kwh
+                / assumed_effective_power_kw
+            ) * 60
+
+            estimated_total_trip_time_hours = (
+                estimated_drive_time_hours
+                + estimated_charging_time_min / 60
+            )
+
+            if estimated_stops >= 5:
+                risk_flag = "High Fleet Charging Risk"
+            elif estimated_stops >= 2:
+                risk_flag = "Moderate Fleet Charging Risk"
+            else:
+                risk_flag = "Lower Fleet Charging Risk"
+
+            if starting_battery_percent < 50:
+                risk_flag = "High Fleet Charging Risk"
+
+            results.append({
+                "route_id": route_id,
+                "status": "Processed",
+                "start_city": start_city,
+                "destination_city": destination_city,
+                "ev_model": ev_model,
+                "weather": weather,
+                "strategy": strategy,
+                "starting_battery_percent": starting_battery_percent,
+                "estimated_route_distance_km": round(
+                    estimated_route_distance_km,
+                    1
+                ),
+                "adjusted_range_km": round(
+                    adjusted_range_km,
+                    1
+                ),
+                "estimated_stops": estimated_stops,
+                "estimated_energy_added_kwh": round(
+                    total_energy_added_kwh,
+                    1
+                ),
+                "estimated_charging_time_min": round(
+                    estimated_charging_time_min,
+                    1
+                ),
+                "estimated_charging_cost_aud": round(
+                    estimated_charging_cost_aud,
+                    2
+                ),
+                "estimated_total_trip_time_hours": round(
+                    estimated_total_trip_time_hours,
+                    2
+                ),
+                "risk_flag": risk_flag
+            })
+
+        results_df = pd.DataFrame(results)
+
+        processed_df = results_df[
+            results_df["status"] == "Processed"
+        ].copy()
+
+        st.subheader("Fleet Route Results")
+
+        if len(processed_df) > 0:
+
+            total_routes = len(processed_df)
+
+            high_risk_routes = len(
+                processed_df[
+                    processed_df["risk_flag"]
+                    == "High Fleet Charging Risk"
+                ]
+            )
+
+            total_estimated_cost = (
+                processed_df["estimated_charging_cost_aud"].sum()
+            )
+
+            total_estimated_charging_time = (
+                processed_df["estimated_charging_time_min"].sum()
+            )
+
+            avg_trip_time = (
+                processed_df["estimated_total_trip_time_hours"].mean()
+            )
+
+            col1, col2, col3, col4, col5 = st.columns(5)
+
+            col1.metric(
+                "Routes Processed",
+                total_routes
+            )
+
+            col2.metric(
+                "High Risk Routes",
+                high_risk_routes
+            )
+
+            col3.metric(
+                "Total Charging Cost",
+                f"${round(total_estimated_cost, 2)}"
+            )
+
+            col4.metric(
+                "Total Charging Time",
+                f"{round(total_estimated_charging_time, 1)} min"
+            )
+
+            col5.metric(
+                "Avg Trip Time",
+                f"{round(avg_trip_time, 1)} hrs"
+            )
+
+        st.dataframe(
+            results_df,
+            use_container_width=True
+        )
+
+        csv_results = results_df.to_csv(index=False)
+
+        st.download_button(
+            "Download Fleet Route Analysis CSV",
+            csv_results,
+            file_name="chargesense_fleet_route_analysis.csv",
+            mime="text/csv"
+        )
+
+        if len(processed_df) > 0:
+
+            st.subheader("Fleet Charging Risk Breakdown")
+
+            risk_counts = (
+                processed_df["risk_flag"]
+                .value_counts()
+                .reset_index()
+            )
+
+            risk_counts.columns = [
+                "risk_flag",
+                "route_count"
+            ]
+
+            st.dataframe(
+                risk_counts,
+                use_container_width=True
+            )
+
+            st.bar_chart(
+                risk_counts.set_index("risk_flag")["route_count"]
+            )
+
+            st.subheader("Estimated Charging Cost by Route")
+
+            cost_chart = processed_df.sort_values(
+                "estimated_charging_cost_aud",
+                ascending=False
+            )
+
+            st.bar_chart(
+                cost_chart.set_index("route_id")[
+                    "estimated_charging_cost_aud"
+                ]
+            )
+
+            st.subheader("Estimated Stops by Route")
+
+            stops_chart = processed_df.sort_values(
+                "estimated_stops",
+                ascending=False
+            )
+
+            st.bar_chart(
+                stops_chart.set_index("route_id")[
+                    "estimated_stops"
+                ]
+            )
+
+            st.subheader("Fleet Planning Recommendations")
+
+            highest_cost_route = processed_df.sort_values(
+                "estimated_charging_cost_aud",
+                ascending=False
+            ).iloc[0]
+
+            highest_stop_route = processed_df.sort_values(
+                "estimated_stops",
+                ascending=False
+            ).iloc[0]
+
+            st.markdown(
+                f"""
+                **Highest cost route:** Route **{highest_cost_route["route_id"]}**
+                from **{highest_cost_route["start_city"]}** to **{highest_cost_route["destination_city"]}**
+                has the highest estimated charging cost.
+
+                **Most charging-intensive route:** Route **{highest_stop_route["route_id"]}**
+                from **{highest_stop_route["start_city"]}** to **{highest_stop_route["destination_city"]}**
+                requires the most estimated charging stops.
+
+                **Fleet action:** Review high-risk routes for longer-range vehicles, depot charging options,
+                alternative charging strategies, or route scheduling changes.
+                """
+            )
+
+    else:
+
+        st.info(
+            "Upload a fleet route CSV to generate multi-route charging estimates."
+        )
+
+    st.markdown("""
+    ### How to interpret this
+
+    **Fleet Route Upload** helps estimate EV charging risk across multiple planned trips.
+
+    It is useful for:
+    - fleet transition planning
+    - route feasibility checks
+    - cost estimation
+    - identifying routes that may need longer-range vehicles
+    - identifying routes that may need depot charging or schedule changes
+
+    This page uses city-level route estimates. A future version could use exact depot addresses,
+    OSRM road routing, live charger availability, depot charging infrastructure, and vehicle telematics.
+    """)
 
 elif page == "Operator Performance Dashboard":
 
