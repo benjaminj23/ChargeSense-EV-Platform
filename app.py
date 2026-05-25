@@ -1742,6 +1742,283 @@ elif page == "Route Comparison Mode":
     This is a scenario comparison tool, not a replacement for the full Real Route Optimizer.
     """)
 
+elif page == "Demand Forecast Model":
+
+    st.title("📊 Demand Forecast Model")
+
+    st.markdown("""
+    Forecast future EV charging pressure using estimated EV fleet growth, charging frequency assumptions,
+    and current charging infrastructure.
+
+    This is a **scenario-based demand model**, not a production-grade time-series model.
+    """)
+
+    st.caption(
+        "The forecast uses estimated EV counts, state-level EV growth rates, public charging behaviour assumptions, and current charger infrastructure."
+    )
+
+    forecast_df = state_metrics.copy()
+
+    forecast_df["estimated_ev_count"] = pd.to_numeric(
+        forecast_df["estimated_ev_count"],
+        errors="coerce"
+    )
+
+    forecast_df["annual_ev_growth_rate"] = pd.to_numeric(
+        forecast_df["annual_ev_growth_rate"],
+        errors="coerce"
+    )
+
+    forecast_df["total_stations"] = pd.to_numeric(
+        forecast_df["total_stations"],
+        errors="coerce"
+    )
+
+    forecast_df["population"] = pd.to_numeric(
+        forecast_df["population"],
+        errors="coerce"
+    )
+
+    forecast_df = forecast_df.dropna(
+        subset=[
+            "state_clean",
+            "estimated_ev_count",
+            "annual_ev_growth_rate",
+            "total_stations"
+        ]
+    )
+
+    st.subheader("Forecast Assumptions")
+
+    national_ev_fleet = st.number_input(
+        "Estimated Current Australian EV Fleet",
+        min_value=100000,
+        max_value=2000000,
+        value=410000,
+        step=10000
+    )
+
+    national_growth_rate = st.slider(
+        "National Annual EV Fleet Growth Rate (%)",
+        5,
+        80,
+        30
+    )
+
+    forecast_horizon = st.slider(
+        "Forecast Horizon (Years)",
+        1,
+        10,
+        3
+    )
+
+    public_charges_per_ev_month = st.slider(
+        "Average Public Charges per EV per Month",
+        1,
+        10,
+        4
+    )
+
+    charger_capacity_sessions_month = st.slider(
+        "Estimated Sessions per Charger per Month",
+        100,
+        2000,
+        800,
+        step=50
+    )
+
+    st.caption(
+        "Public charging frequency and charger capacity are adjustable assumptions because actual charging behaviour varies by vehicle type, location, charger speed, and home charging access."
+    )
+
+    forecast_df["state_ev_share"] = (
+        forecast_df["estimated_ev_count"]
+        / forecast_df["estimated_ev_count"].sum()
+    )
+
+    forecast_df["estimated_current_evs"] = (
+        forecast_df["state_ev_share"] * national_ev_fleet
+    )
+
+    forecast_df["state_growth_rate_used"] = (
+        forecast_df["annual_ev_growth_rate"]
+        .fillna(national_growth_rate)
+        .clip(lower=0, upper=100)
+    )
+
+    forecast_df["forecast_evs"] = (
+        forecast_df["estimated_current_evs"]
+        * (
+            1 + forecast_df["state_growth_rate_used"] / 100
+        ) ** forecast_horizon
+    )
+
+    forecast_df["monthly_public_sessions"] = (
+        forecast_df["forecast_evs"]
+        * public_charges_per_ev_month
+    )
+
+    forecast_df["sessions_per_station_month"] = (
+        forecast_df["monthly_public_sessions"]
+        / forecast_df["total_stations"].replace(0, np.nan)
+    )
+
+    forecast_df["required_stations"] = (
+        forecast_df["monthly_public_sessions"]
+        / charger_capacity_sessions_month
+    )
+
+    forecast_df["additional_stations_needed"] = (
+        forecast_df["required_stations"]
+        - forecast_df["total_stations"]
+    )
+
+    forecast_df["additional_stations_needed"] = (
+        forecast_df["additional_stations_needed"]
+        .clip(lower=0)
+    )
+
+    max_pressure = forecast_df["sessions_per_station_month"].max()
+
+    if max_pressure == 0 or pd.isna(max_pressure):
+        forecast_df["demand_pressure_index"] = 0
+    else:
+        forecast_df["demand_pressure_index"] = (
+            forecast_df["sessions_per_station_month"]
+            / max_pressure
+        ) * 100
+
+    forecast_df["demand_pressure_index"] = (
+        forecast_df["demand_pressure_index"]
+        .fillna(0)
+        .round(2)
+    )
+
+    def demand_pressure_label(score):
+        if score >= 70:
+            return "High Future Pressure"
+        elif score >= 40:
+            return "Moderate Future Pressure"
+        return "Lower Future Pressure"
+
+    forecast_df["demand_pressure_label"] = (
+        forecast_df["demand_pressure_index"]
+        .apply(demand_pressure_label)
+    )
+
+    forecast_df = forecast_df.sort_values(
+        "demand_pressure_index",
+        ascending=False
+    )
+
+    highest_pressure_state = forecast_df.iloc[0]
+
+    forecast_national_evs = forecast_df["forecast_evs"].sum()
+
+    total_additional_stations = forecast_df["additional_stations_needed"].sum()
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "Forecast National EV Fleet",
+        f"{int(round(forecast_national_evs, 0)):,}"
+    )
+
+    col2.metric(
+        "Highest Pressure State",
+        highest_pressure_state["state_clean"]
+    )
+
+    col3.metric(
+        "Highest Pressure Index",
+        round(highest_pressure_state["demand_pressure_index"], 1)
+    )
+
+    col4, col5 = st.columns(2)
+
+    col4.metric(
+        "Estimated Additional Stations Needed",
+        f"{int(round(total_additional_stations, 0)):,}"
+    )
+
+    col5.metric(
+        "Forecast Horizon",
+        f"{forecast_horizon} years"
+    )
+
+    st.subheader("Forecast Demand Pressure by State")
+
+    st.dataframe(
+        forecast_df[
+            [
+                "state_clean",
+                "population",
+                "total_stations",
+                "estimated_current_evs",
+                "state_growth_rate_used",
+                "forecast_evs",
+                "monthly_public_sessions",
+                "sessions_per_station_month",
+                "required_stations",
+                "additional_stations_needed",
+                "demand_pressure_index",
+                "demand_pressure_label"
+            ]
+        ].round(2),
+        use_container_width=True
+    )
+
+    st.subheader("Demand Pressure Index")
+
+    pressure_chart = forecast_df.sort_values(
+        "demand_pressure_index",
+        ascending=False
+    )
+
+    st.bar_chart(
+        pressure_chart.set_index("state_clean")["demand_pressure_index"]
+    )
+
+    st.subheader("Forecast EV Fleet by State")
+
+    ev_chart = forecast_df.sort_values(
+        "forecast_evs",
+        ascending=False
+    )
+
+    st.bar_chart(
+        ev_chart.set_index("state_clean")["forecast_evs"]
+    )
+
+    st.subheader("Estimated Additional Stations Needed")
+
+    station_gap_chart = forecast_df.sort_values(
+        "additional_stations_needed",
+        ascending=False
+    )
+
+    st.bar_chart(
+        station_gap_chart.set_index("state_clean")["additional_stations_needed"]
+    )
+
+    st.markdown("""
+    ### How to interpret this
+
+    **Forecast EVs** estimates future EV fleet size using current estimated EV counts and annual growth assumptions.
+
+    **Monthly Public Sessions** estimates public charging demand based on the assumed number of public charging sessions per EV per month.
+
+    **Sessions per Station per Month** estimates pressure on existing charging infrastructure.
+
+    **Demand Pressure Index** scales the highest-pressure state to 100 and compares other states against it.
+
+    **Additional Stations Needed** estimates how many more charging stations may be needed to meet the assumed monthly charging demand capacity.
+    """)
+
+    st.caption(
+        "Limitations: This model does not include charger plug count, charger uptime, home charging availability, traffic flows, charger speed mix, or live utilisation. It is intended for scenario planning and portfolio demonstration."
+    )
+
 
 elif page == "Real Route Optimizer":
 
