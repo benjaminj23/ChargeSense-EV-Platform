@@ -12,7 +12,7 @@ The project was built as a portfolio and product analytics case study to explore
 Add your deployed Streamlit link here:
 
 
-https://your-streamlit-app-link
+[https://your-streamlit-app-link](https://chargesense-ev-platform-jfrqifjrdyndtntqt4she6.streamlit.app/#charge-sense)
 
 ## Copyright
 
