@@ -182,10 +182,13 @@ state_metrics["investment_priority_score"] = (
     .round(2)
 )
 
+high_threshold = state_metrics["investment_priority_score"].quantile(0.67)
+medium_threshold = state_metrics["investment_priority_score"].quantile(0.33)
+
 def investment_priority_label(score):
-    if score >= 70:
+    if score >= high_threshold:
         return "High Priority"
-    elif score >= 40:
+    elif score >= medium_threshold:
         return "Medium Priority"
     return "Lower Priority"
 
@@ -193,6 +196,7 @@ state_metrics["investment_priority_label"] = (
     state_metrics["investment_priority_score"]
     .apply(investment_priority_label)
 )
+
 state_metrics["chargers_per_1000_evs"] = (
     state_metrics["total_stations"]
     / state_metrics["estimated_ev_count"]
