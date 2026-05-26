@@ -3,7 +3,7 @@
 # This code is for portfolio and  demonstration purposes only.
 import random
 import math
-import requests
+import requests 
 import numpy as np
 from datetime import datetime, timedelta
 
