@@ -218,30 +218,46 @@ state_metrics["chargers_per_1000_evs"] = (
 st.sidebar.title("⚡ ChargeSense")
 
 
-page = st.sidebar.radio(
-    "Navigate",
+app_mode = st.sidebar.radio(
+    "Choose Mode",
     [
-        "Home",
-        "Infrastructure Overview",
-        "Interactive Map",
-        "Infrastructure Gap Analysis",
-        "Reliability Intelligence",
-        "Reliability Risk Model",
-        "Operator Performance Dashboard",
-        "Charger Recommendation",
-        "Real Route Optimizer",
-        "Route Comparison Mode",
-        "Demand Forecast Model",
-        "Fleet & Council Intelligence",
-        "Fleet Route Upload",
-        "Queue Simulation Engine",
-        "Reservation Simulation",
-        "Charging Cost Simulator",
-        "Model Assumptions",
-        "Project Insights"
-    ],
- 
+        "EV Trip Planner",
+        "Infrastructure Intelligence"
+    ]
 )
+
+if app_mode == "EV Trip Planner":
+    page = st.sidebar.radio(
+        "Navigate",
+        [
+            "Home",
+            "Real Route Optimizer",
+            "Route Comparison Mode",
+            "Charger Recommendation",
+            "Charging Cost Simulator",
+            "Reservation Simulation"
+        ]
+    )
+
+else:
+    page = st.sidebar.radio(
+        "Navigate",
+        [
+            "Home",
+            "Infrastructure Overview",
+            "Interactive Map",
+            "Infrastructure Gap Analysis",
+            "Demand Forecast Model",
+            "Fleet & Council Intelligence",
+            "Fleet Route Upload",
+            "Operator Performance",
+            "Reliability Intelligence",
+            "Reliability Risk Model",
+            "Queue Simulation Engine",
+            "Model Assumptions",
+            "Project Insights"
+        ]
+    )
 
 # -----------------------------
 # HOME
