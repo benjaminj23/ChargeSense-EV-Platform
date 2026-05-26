@@ -870,7 +870,7 @@ elif page == "Reservation Simulation":
     reservation_minutes = st.slider("Reservation Duration (minutes)", 15, 60, 20)
 
     def generate_access_code():
-        return str(random.rand int(1000, 9999))
+        return str(random.randint(1000, 9999))
 
     if st.button("Simulate Reservation"):
         booking_time = datetime.now()
