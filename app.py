@@ -3924,7 +3924,7 @@ elif page == "Real Route Optimizer":
                     ~candidate_stops["station_name"].isin(used_station_names)
                 ]
 
-                if len(cand idate_stops) == 0:
+                if len(candidate_stops) == 0:
                     break
 
                 best_stop = (
