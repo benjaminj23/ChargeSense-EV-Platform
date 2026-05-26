@@ -264,34 +264,80 @@ else:
 # -----------------------------
 
 if page == "Home":
+
     st.title("⚡ ChargeSense")
-    st.subheader("EV Infrastructure Intelligence Platform")
+
+    st.subheader("EV Infrastructure Intelligence & Route Planning Platform")
 
     st.markdown("""
-    ChargeSense is an EV Infrastructure Intelligence Platform designed to analyze
-    charging reliability, infrastructure quality, congestion risk, charging accessibility,
-    future pressure and charging operations across Australia.
+    ChargeSense is a prototype platform for EV route planning and EV infrastructure intelligence in Australia.
 
-    Features include:
-    - Interactive infrastructure mapping
-    - Reliability intelligence scoring
-    - Charger recommendation engine
-    - Reservation simulation
-    - Congestion risk analysis
-    - Queue simulation
-    - Charging cost simulation
-    - Infrastructure investment-style analytics
+    It combines public charger data, EV registration-based signals, routing APIs, demand forecasting,
+    reliability scoring, corridor risk analysis, operator benchmarking, and fleet/council planning analytics.
     """)
+
+    st.markdown("### Two Product Modes")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        #### 🚗 EV Trip Planner
+
+        Helps EV drivers plan trips by estimating:
+        - charging stops
+        - charging time
+        - charging cost
+        - route risk
+        - charger reliability
+        - rest-stop quality
+        - weather-adjusted range
+        """)
+
+    with col2:
+        st.markdown("""
+        #### 🏛️ Infrastructure Intelligence
+
+        Helps fleets, councils, planners, and operators analyse:
+        - infrastructure gaps
+        - future charging demand
+        - investment priority
+        - operator performance
+        - fleet route risk
+        - additional station needs
+        """)
 
     st.success("Platform loaded successfully")
 
-    st.divider()
+    st.markdown("---")
+
+    st.markdown("""
+    ### Key Features
+
+    - Real EV route optimization using OSRM
+    - Custom suburb/place routing using geocoding
+    - Battery-aware charging stop sequencing
+    - Weather-adjusted EV range
+    - Charging cost estimation
+    - Corridor risk scoring
+    - Demand forecasting
+    - Investment priority ranking
+    - Operator performance benchmarking
+    - Fleet route CSV upload
+    - Fleet & council planning reports
+    """)
+
+    st.markdown("---")
 
     st.caption(
-        "Built using Python, Streamlit, OpenChargeMap API data and NSW EV infrastructure data."
+        "Built using Python, Streamlit, OpenChargeMap data, OSRM routing, Nominatim geocoding, and EV registration-derived inputs."
     )
 
-    st.link_button("View GitHub Repository", "YOUR_GITHUB_LINK")
+    st.link_button(
+        "View GitHub Repository",
+        "YOUR_GITHUB_REPO_LINK_HERE"
+    )
+
     st.caption("© 2026 Benjamin Joseph. All rights reserved.")
 
 # -----------------------------
