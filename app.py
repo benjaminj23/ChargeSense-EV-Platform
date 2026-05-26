@@ -4022,7 +4022,7 @@ elif page == "Real Route Optimizer":
                     battery_warning_triggered = True
                     break
 
-        if battery_warning_triggered:
+                if battery_warning_triggered:
             low_arrival_stops = [
                 stop for stop in charging_sequence
                 if stop.get("arrival_battery_%", 100) < minimum_arrival_percent
@@ -4044,15 +4044,14 @@ elif page == "Real Route Optimizer":
                     f"Consider increasing starting battery, reducing the safety buffer, "
                     f"choosing a longer-range EV, or switching to a more conservative charging strategy."
                 )
-             else:
+            else:
                 st.warning(
-                     "The route planner detected a high-risk charging scenario. "
-                     "This may be because the route requires too many charging stops, charger spacing is weak, "
-                     "or the selected EV/range settings are too restrictive. "
-                     "Consider increasing starting battery, using a longer-range EV, reducing the safety buffer, "
-                     "or choosing a more conservative charging strategy."
-                 )
-
+                    "The route planner detected a high-risk charging scenario. "
+                    "This may be because the route requires too many charging stops, charger spacing is weak, "
+                    "or the selected EV/range settings are too restrictive. "
+                    "Consider increasing starting battery, using a longer-range EV, reducing the safety buffer, "
+                    "or choosing a more conservative charging strategy."
+                )
         if len(charging_sequence) == 0:
             st.success(
                 "No charging stop required based on selected EV range."
