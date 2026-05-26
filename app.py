@@ -2305,7 +2305,7 @@ elif page == "Fleet & Council Intelligence":
 
     col2.metric(
         "Highest Demand  Pressure",
-        top_demand _state["state_clean"]
+        top_demand_state["state_clean"]
     )
 
     col3.metric(
