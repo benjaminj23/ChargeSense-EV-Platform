@@ -130,6 +130,37 @@ The demand forecast model estimates future EV charging pressure using EV fleet g
 
 Add screenshots in an `images/` folder and update the paths below.
 
+
+Current limitations
+
+ChargeSense currently uses public and derived data, so some features are prototype estimates:
+
+Charger availability is simulated, not live.
+Reliability is estimated from public metadata and data freshness.
+Amenity score is keyword-based, not confirmed through a live POI API.
+Operator names are estimated from station names.
+Demand forecasts are scenario-based, not production statistical forecasts.
+Fleet route upload uses city-level estimates, not depot-to-depot road routing.
+Route Comparison Mode uses approximate distance estimates.
+Real Route Optimizer uses OSRM routing but does not include live traffic.
+No OCPI integration yet.
+No user accounts, payments, or live charging session control.
+Real data needed later
+
+For a production version, ChargeSense would need:
+
+Live charger availability from charging operators
+OCPI feeds for charger status, pricing, roaming, and session data
+Confirmed charger uptime and outage history
+Real pricing data by operator and station
+Real amenities/POI data from Google Places or OpenStreetMap
+EV registrations by postcode, suburb, or LGA
+LGA/suburb population and boundary data
+Traffic and corridor demand data
+Fleet depot locations and route schedules
+Fleet vehicle telematics or usage patterns
+Grid capacity or site feasibility data for infrastructure planning
+
 ```text
 images/home.png
 images/real-route-optimizer.png
