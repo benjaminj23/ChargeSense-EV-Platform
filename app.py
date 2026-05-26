@@ -235,7 +235,8 @@ if app_mode == "EV Trip Planner":
             "Route Comparison Mode",
             "Charger Recommendation",
             "Charging Cost Simulator",
-            "Reservation Simulation"
+            "Reservation Simulation",
+            "Data Reality & Production Needs"
         ]
     )
 
@@ -254,6 +255,7 @@ else:
             "Reliability Intelligence",
             "Reliability Risk Model",
             "Queue Simulation Engine",
+            "Data Reality & Production Needs",
             "Model Assumptions",
             "Project Insights"
         ]
@@ -4232,6 +4234,226 @@ Corridor Risk Score: {corridor_risk_score}
             fig,
             use_container_width=True
         )
+
+elif page == "Data Reality & Production Needs":
+
+    st.title("🧾 Data Reality & Production Needs")
+
+    st.markdown("""
+    ChargeSense is currently a working prototype that combines public datasets,
+    routing APIs, derived metrics, and scenario-based assumptions.
+
+    This page explains what is currently based on real public data, what is estimated,
+    and what additional data would be required to make the platform production-grade.
+    """)
+
+    st.subheader("Current Data Used")
+
+    current_data = pd.DataFrame(
+        [
+            {
+                "Data Area": "Charger locations",
+                "Current Source": "OpenChargeMap / public charger datasets",
+                "Current Status": "Real public data",
+                "Limitations": "Metadata quality and completeness can vary"
+            },
+            {
+                "Data Area": "Route distance and geometry",
+                "Current Source": "OSRM routing API",
+                "Current Status": "Real road routing",
+                "Limitations": "Does not include live traffic or road closures"
+            },
+            {
+                "Data Area": "Custom place search",
+                "Current Source": "Nominatim geocoding",
+                "Current Status": "Real geocoding API",
+                "Limitations": "Location matching may not always be perfect"
+            },
+            {
+                "Data Area": "EV registrations / market signals",
+                "Current Source": "AAA / BITRE-derived inputs",
+                "Current Status": "Public/derived data",
+                "Limitations": "Currently state-level, not full suburb/LGA detail"
+            },
+            {
+                "Data Area": "Vehicle range and battery specs",
+                "Current Source": "Hard-coded EV profile assumptions",
+                "Current Status": "Prototype assumptions",
+                "Limitations": "Should be replaced with maintained vehicle database"
+            },
+            {
+                "Data Area": "Weather impact",
+                "Current Source": "Scenario multipliers",
+                "Current Status": "Estimated",
+                "Limitations": "Not connected to live route weather"
+            },
+            {
+                "Data Area": "Availability",
+                "Current Source": "Reliability/data freshness proxy",
+                "Current Status": "Simulated",
+                "Limitations": "Not live charger occupancy"
+            },
+            {
+                "Data Area": "Amenities",
+                "Current Source": "Keyword-based station metadata scoring",
+                "Current Status": "Estimated",
+                "Limitations": "Not confirmed through live POI data"
+            },
+            {
+                "Data Area": "Charging price",
+                "Current Source": "User-selected price assumption",
+                "Current Status": "Scenario estimate",
+                "Limitations": "Not station/operator-specific live pricing"
+            }
+        ]
+    )
+
+    st.dataframe(
+        current_data,
+        use_container_width=True
+    )
+
+    st.subheader("What Data Would Be Needed for a Production Version")
+
+    production_data = pd.DataFrame(
+        [
+            {
+                "Need": "Live charger availability",
+                "Why It Matters": "Shows whether chargers are available, occupied, offline, or faulty in real time",
+                "Likely Source": "Charging operators / OCPI feeds / roaming platforms",
+                "Access Difficulty": "High"
+            },
+            {
+                "Need": "Station-level pricing",
+                "Why It Matters": "Allows exact route cost instead of estimated cost",
+                "Likely Source": "Operators / OCPI tariff feeds",
+                "Access Difficulty": "High"
+            },
+            {
+                "Need": "Uptime and outage history",
+                "Why It Matters": "Improves reliability scoring and corridor risk accuracy",
+                "Likely Source": "Charging operators / maintenance records",
+                "Access Difficulty": "High"
+            },
+            {
+                "Need": "Delivered charging power",
+                "Why It Matters": "Improves charging time estimates beyond advertised max kW",
+                "Likely Source": "Charging sessions / operator telemetry",
+                "Access Difficulty": "High"
+            },
+            {
+                "Need": "Vehicle charging curves",
+                "Why It Matters": "Improves charging time estimates by vehicle and battery percentage",
+                "Likely Source": "EV databases / manufacturer data / testing datasets",
+                "Access Difficulty": "Medium"
+            },
+            {
+                "Need": "Live weather and traffic",
+                "Why It Matters": "Improves range, travel time, and route risk estimates",
+                "Likely Source": "Weather APIs / Google Maps / HERE / TomTom",
+                "Access Difficulty": "Medium"
+            },
+            {
+                "Need": "POI and amenities near chargers",
+                "Why It Matters": "Confirms toilets, food, cafes, parking, safety, and opening hours",
+                "Likely Source": "Google Places / OpenStreetMap POI data",
+                "Access Difficulty": "Medium"
+            },
+            {
+                "Need": "EV registrations by LGA/postcode",
+                "Why It Matters": "Supports local infrastructure planning and site selection",
+                "Likely Source": "Government registration datasets / NEVDIS-derived sources",
+                "Access Difficulty": "Medium to High"
+            },
+            {
+                "Need": "Traffic volume and corridor demand",
+                "Why It Matters": "Supports charger placement and investment prioritisation",
+                "Likely Source": "TfNSW traffic counts / transport datasets",
+                "Access Difficulty": "Medium"
+            },
+            {
+                "Need": "Grid capacity and site feasibility",
+                "Why It Matters": "Determines whether chargers can actually be installed at candidate sites",
+                "Likely Source": "DNSPs, councils, grid operators",
+                "Access Difficulty": "Very High"
+            },
+            {
+                "Need": "Fleet depot and route data",
+                "Why It Matters": "Enables real fleet electrification planning",
+                "Likely Source": "Fleet customers",
+                "Access Difficulty": "Customer-provided"
+            }
+        ]
+    )
+
+    st.dataframe(
+        production_data,
+        use_container_width=True
+    )
+
+    st.subheader("Prototype vs Production Readiness")
+
+    readiness_data = pd.DataFrame(
+        [
+            {
+                "Feature": "Real Route Optimizer",
+                "Prototype Status": "Working",
+                "Production Gap": "Needs live traffic, live charger status, real pricing, and vehicle charging curves"
+            },
+            {
+                "Feature": "Corridor Risk Score",
+                "Prototype Status": "Working estimate",
+                "Production Gap": "Needs outage history, live status, queue data, and station uptime"
+            },
+            {
+                "Feature": "Demand Forecast Model",
+                "Prototype Status": "Scenario-based",
+                "Production Gap": "Needs granular EV registrations, charger utilisation, and local demand data"
+            },
+            {
+                "Feature": "Fleet Route Upload",
+                "Prototype Status": "Working high-level model",
+                "Production Gap": "Needs depot addresses, route schedules, telematics, and real operating constraints"
+            },
+            {
+                "Feature": "Operator Performance",
+                "Prototype Status": "Public metadata benchmark",
+                "Production Gap": "Needs confirmed operator mapping, session success rates, uptime, and delivered power"
+            },
+            {
+                "Feature": "Amenity Score",
+                "Prototype Status": "Keyword estimate",
+                "Production Gap": "Needs Google Places or OpenStreetMap POI enrichment"
+            },
+            {
+                "Feature": "Availability Layer",
+                "Prototype Status": "Simulated",
+                "Production Gap": "Needs live operator APIs or OCPI integration"
+            }
+        ]
+    )
+
+    st.dataframe(
+        readiness_data,
+        use_container_width=True
+    )
+
+    st.subheader("Key Validation Question")
+
+    st.info(
+        "The next stage is not simply adding more features. The key question is which missing data layer matters most to the first customer segment: live availability for drivers, route/depot data for fleets, or local demand and site feasibility data for councils."
+    )
+
+    st.markdown("""
+    ### How this helps the product roadmap
+
+    This page separates the current prototype from a production-grade platform.
+
+    It shows that ChargeSense already demonstrates the workflow using public data and assumptions,
+    while also identifying the exact data partnerships and integrations required for commercial accuracy.
+    """)
+
+
 
 # -----------------------------
 # PROJECT INSIGHTS
