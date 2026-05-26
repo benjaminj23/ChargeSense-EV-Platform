@@ -2511,13 +2511,13 @@ elif page == "Fleet & Council Intelligence":
 
     st.subheader("Demand  Pressure Index by State")
 
-    demand _chart = b2b_df.sort_values(
+    demand_chart = b2b_df.sort_values(
         "demand _pressure_index",
         ascending=False
     )
 
     st.bar_chart(
-        demand _chart.set_index("state_clean")["demand _pressure_index"]
+        demand_chart.set_index("state_clean")["demand _pressure_index"]
     )
 
     st.subheader("Operator Performance Score")
