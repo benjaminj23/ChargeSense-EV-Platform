@@ -273,7 +273,7 @@ if page == "Home":
     ChargeSense is a prototype platform for EV route planning and EV infrastructure intelligence in Australia.
 
     It combines public charger data, EV registration-based signals, routing APIs, demand forecasting,
-    reliability scoring, corridor risk analysis, operator benchmarking, and fleet/council planning analytics.
+    reliability scoring, corridor risk analysis, operator benchmarking andfleet/council planning analytics.
     """)
 
     st.markdown("### Two Product Modes")
@@ -298,7 +298,7 @@ if page == "Home":
         st.markdown("""
         #### 🏛️ Infrastructure Intelligence
 
-        Helps fleets, councils, planners, and operators analyse:
+        Helps fleets, councils, planners andoperators analyse:
         - infrastructure gaps
         - future charging demand
         - investment priority
@@ -330,7 +330,7 @@ if page == "Home":
     st.markdown("---")
 
     st.caption(
-        "Built using Python, Streamlit, OpenChargeMap data, OSRM routing, Nominatim geocoding, and EV registration-derived inputs."
+        "Built using Python, Streamlit, OpenChargeMap data, OSRM routing, Nominatim geocoding andEV registration-derived inputs."
     )
 
     st.link_button(
