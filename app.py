@@ -2145,16 +2145,16 @@ elif page == "Fleet & Council Intelligence":
     max_sessions_pressure = b2b_df["sessions_per_station_month"].max()
 
     if pd.isna(max_sessions_pressure) or max_sessions_pressure == 0:
-        b2b_df["demand _pressure_index"] = 0
+        b2b_df["demand_pressure_index"] = 0
     else:
-        b2b_df["demand _pressure_index"] = (
+        b2b_df["demand_pressure_index"] = (
             b2b_df["sessions_per_station_month"]
             / max_sessions_pressure
             * 100
         )
 
-    b2b_df["demand _pressure_index"] = (
-        b2b_df["demand _pressure_index"]
+    b2b_df["demand_pressure_index"] = (
+        b2b_df["demand_pressure_index"]
         .fillna(0)
         .round(2)
     )
@@ -2285,7 +2285,7 @@ elif page == "Fleet & Council Intelligence":
     ).iloc[0]
 
     top_demand_state = b2b_df.sort_values(
-        "demand _pressure_index",
+        "demand_pressure_index",
         ascending=False
     ).iloc[0]
 
@@ -2347,7 +2347,7 @@ elif page == "Fleet & Council Intelligence":
     ).head(3)
 
     demand_states = b2b_df.sort_values(
-        "demand _pressure_index",
+        "demand_pressure_index",
         ascending=False
     ).head(3)
 
@@ -2388,7 +2388,7 @@ elif page == "Fleet & Council Intelligence":
                 "investment_priority_score",
                 "investment_priority_label",
                 "additional_stations_needed",
-                "demand _pressure_index"
+                "demand_pressure_index"
             ]
         ]
         .sort_values("investment_priority_score", ascending=False)
@@ -2425,10 +2425,10 @@ elif page == "Fleet & Council Intelligence":
                 "sessions_per_station_month",
                 "required_stations",
                 "additional_stations_needed",
-                "demand _pressure_index"
+                "demand_pressure_index"
             ]
         ]
-        .sort_values("demand _pressure_index", ascending=False)
+        .sort_values("demand_pressure_index", ascending=False)
         .round(2)
     )
 
@@ -2442,7 +2442,7 @@ elif page == "Fleet & Council Intelligence":
     st.download_button(
         "Download Demand  Forecast Report CSV",
         csv_forecast,
-        file_name="chargesense_demand _forecast_report.csv",
+        file_name="chargesense_demand_forecast_report.csv",
         mime="text/csv"
     )
 
@@ -2512,12 +2512,12 @@ elif page == "Fleet & Council Intelligence":
     st.subheader("Demand  Pressure Index by State")
 
     demand_chart = b2b_df.sort_values(
-        "demand _pressure_index",
+        "demand_pressure_index",
         ascending=False
     )
 
     st.bar_chart(
-        demand_chart.set_index("state_clean")["demand _pressure_index"]
+        demand_chart.set_index("state_clean")["demand_pressure_index"]
     )
 
     st.subheader("Operator Performance Score")
@@ -3034,33 +3034,33 @@ elif page == "Demand  Forecast Model":
     max_pressure = forecast_df["sessions_per_station_month"].max()
 
     if max_pressure == 0 or pd.isna(max_pressure):
-        forecast_df["demand _pressure_index"] = 0
+        forecast_df["demand_pressure_index"] = 0
     else:
-        forecast_df["demand _pressure_index"] = (
+        forecast_df["demand_pressure_index"] = (
             forecast_df["sessions_per_station_month"]
             / max_pressure
         ) * 100
 
-    forecast_df["demand _pressure_index"] = (
-        forecast_df["demand _pressure_index"]
+    forecast_df["demand_pressure_index"] = (
+        forecast_df["demand_pressure_index"]
         .fillna(0)
         .round(2)
     )
 
-    def demand _pressure_label(score):
+    def demand_pressure_label(score):
         if score >= 70:
             return "High Future Pressure"
         elif score >= 40:
             return "Moderate Future Pressure"
         return "Lower Future Pressure"
 
-    forecast_df["demand _pressure_label"] = (
-        forecast_df["demand _pressure_index"]
-        .apply(demand _pressure_label)
+    forecast_df["demand_pressure_label"] = (
+        forecast_df["demand_pressure_index"]
+        .apply(demand_pressure_label)
     )
 
     forecast_df = forecast_df.sort_values(
-        "demand _pressure_index",
+        "demand_pressure_index",
         ascending=False
     )
 
@@ -3084,7 +3084,7 @@ elif page == "Demand  Forecast Model":
 
     col3.metric(
         "Highest Pressure Index",
-        round(highest_pressure_state["demand _pressure_index"], 1)
+        round(highest_pressure_state["demand_pressure_index"], 1)
     )
 
     col4, col5 = st.columns(2)
@@ -3114,8 +3114,8 @@ elif page == "Demand  Forecast Model":
                 "sessions_per_station_month",
                 "required_stations",
                 "additional_stations_needed",
-                "demand _pressure_index",
-                "demand _pressure_label"
+                "demand_pressure_index",
+                "demand_pressure_label"
             ]
         ].round(2),
         use_container_width=True
@@ -3124,12 +3124,12 @@ elif page == "Demand  Forecast Model":
     st.subheader("Demand  Pressure Index")
 
     pressure_chart = forecast_df.sort_values(
-        "demand _pressure_index",
+        "demand_pressure_index",
         ascending=False
     )
 
     st.bar_chart(
-        pressure_chart.set_index("state_clean")["demand _pressure_index"]
+        pressure_chart.set_index("state_clean")["demand_pressure_index"]
     )
 
     st.subheader("Forecast EV Fleet by State")
