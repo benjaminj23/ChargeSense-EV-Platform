@@ -2346,7 +2346,7 @@ elif page == "Fleet & Council Intelligence":
         ascending=False
     ).head(3)
 
-    demand _states = b2b_df.sort_values(
+    demand_states = b2b_df.sort_values(
         "demand _pressure_index",
         ascending=False
     ).head(3)
