@@ -2284,7 +2284,7 @@ elif page == "Fleet & Council Intelligence":
         ascending=False
     ).iloc[0]
 
-    top_demand _state = b2b_df.sort_values(
+    top_demand_state = b2b_df.sort_values(
         "demand _pressure_index",
         ascending=False
     ).iloc[0]
