@@ -3921,7 +3921,7 @@ elif page == "Real Route Optimizer":
                 )
 
                 candidate_stops = candidate_stops[
-                    ~cand idate_stops["station_name"].isin(used_station_names)
+                    ~candidate_stops["station_name"].isin(used_station_names)
                 ]
 
                 if len(cand idate_stops) == 0:
