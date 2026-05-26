@@ -3906,10 +3906,10 @@ elif page == "Real Route Optimizer":
 
                 target_point = route_df.iloc[target_index]
 
-                cand idate_stops = recommended_stops.copy()
+                candidate_stops = recommended_stops.copy()
 
-                cand idate_stops["distance_to_target_km"] = (
-                    cand idate_stops.apply(
+                candidate_stops["distance_to_target_km"] = (
+                    candidate_stops.apply(
                         lambda row: haversine_distance(
                             row["latitude"],
                             row["longitude"],
@@ -3920,7 +3920,7 @@ elif page == "Real Route Optimizer":
                     )
                 )
 
-                cand idate_stops = cand idate_stops[
+                candidate_stops = candidate_stops[
                     ~cand idate_stops["station_name"].isin(used_station_names)
                 ]
 
@@ -3928,7 +3928,7 @@ elif page == "Real Route Optimizer":
                     break
 
                 best_stop = (
-                    cand idate_stops
+                    candidate_stops
                     .sort_values(
                         [
                             "distance_to_target_km",
