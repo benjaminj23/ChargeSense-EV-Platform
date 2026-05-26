@@ -236,7 +236,8 @@ if app_mode == "EV Trip Planner":
             "Charger Recommendation",
             "Charging Cost Simulator",
             "Reservation Simulation",
-            "Data Reality & Production Needs"
+            "Data Reality & Production Needs",
+            "Station Feedback"
         ]
     )
 
@@ -5034,6 +5035,232 @@ elif page == "Operator Performance":
     st.caption(
         "Future production version: use confirmed operator mapping, live charger status, uptime history, delivered charging power, pricing, and session success rates."
     )
+
+elif page == "Station Feedback":
+
+    st.title("⭐ Station Feedback & Reliability Reviews")
+
+    st.markdown("""
+    Submit user feedback about charging stations.
+
+    This prototype uses session-based feedback to show how real driver reviews could improve charger reliability scoring,
+    wait-time estimates, and station trust in future versions.
+    """)
+
+    st.caption(
+        "Prototype note: Reviews are stored only during the current app session. A production version would need a database, user accounts, moderation, and station ID matching."
+    )
+
+    # -----------------------------
+    # Initialise review storage
+    # -----------------------------
+
+    if "station_reviews" not in st.session_state:
+        st.session_state.station_reviews = []
+
+    feedback_df = ocm_df.copy()
+
+    feedback_df["station_name"] = feedback_df["station_name"].fillna("Unknown Station")
+    feedback_df["town"] = feedback_df["town"].fillna("")
+    feedback_df["state_clean"] = feedback_df["state_clean"].fillna("")
+
+    feedback_df["station_display_name"] = (
+        feedback_df["station_name"].astype(str)
+        + " | "
+        + feedback_df["town"].astype(str)
+        + " | "
+        + feedback_df["state_clean"].astype(str)
+    )
+
+    station_options = sorted(feedback_df["station_display_name"].dropna().unique())
+
+    st.subheader("Submit Station Feedback")
+
+    selected_station_display = st.selectbox(
+        "Select charging station",
+        station_options
+    )
+
+    selected_station_name = selected_station_display.split(" | ")[0]
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        user_rating = st.slider(
+            "Overall station rating",
+            1,
+            5,
+            4
+        )
+
+    with col2:
+        charger_worked = st.radio(
+            "Did the charger work?",
+            ["Yes", "No", "Partially"],
+            horizontal=True
+        )
+
+    col3, col4 = st.columns(2)
+
+    with col3:
+        reported_wait_time = st.slider(
+            "How long did you wait before charging? (minutes)",
+            0,
+            120,
+            10
+        )
+
+    with col4:
+        delivered_speed_kw = st.slider(
+            "Approx. delivered charging speed (kW)",
+            0,
+            350,
+            75
+        )
+
+    issue_type = st.selectbox(
+        "Issue type, if any",
+        [
+            "No issue",
+            "Charger offline",
+            "Payment issue",
+            "Cable/connector issue",
+            "Charging slower than expected",
+            "Long queue",
+            "App/start session issue",
+            "Poor amenities",
+            "Other"
+        ]
+    )
+
+    would_recommend = st.radio(
+        "Would you recommend this station to another EV driver?",
+        ["Yes", "No", "Not sure"],
+        horizontal=True
+    )
+
+    user_comment = st.text_area(
+        "Optional comment",
+        placeholder="Example: Charger worked but wait time was long during peak hours."
+    )
+
+    submit_review = st.button("Submit Feedback")
+
+    if submit_review:
+
+        review_record = {
+            "station_name": selected_station_name,
+            "station_display_name": selected_station_display,
+            "user_rating": user_rating,
+            "charger_worked": charger_worked,
+            "reported_wait_time_min": reported_wait_time,
+            "delivered_speed_kw": delivered_speed_kw,
+            "issue_type": issue_type,
+            "would_recommend": would_recommend,
+            "comment": user_comment
+        }
+
+        st.session_state.station_reviews.append(review_record)
+
+        st.success("Feedback submitted for this session.")
+
+    # -----------------------------
+    # Review summary
+    # -----------------------------
+
+    st.subheader("Session Feedback Summary")
+
+    if len(st.session_state.station_reviews) == 0:
+        st.info("No station feedback submitted yet in this session.")
+
+    else:
+        reviews_df = pd.DataFrame(st.session_state.station_reviews)
+
+        total_reviews = len(reviews_df)
+
+        avg_rating = reviews_df["user_rating"].mean()
+        avg_wait_time = reviews_df["reported_wait_time_min"].mean()
+
+        success_rate = (
+            reviews_df["charger_worked"]
+            .map(
+                {
+                    "Yes": 1,
+                    "Partially": 0.5,
+                    "No": 0
+                }
+            )
+            .mean()
+            * 100
+        )
+
+        recommend_rate = (
+            reviews_df["would_recommend"]
+            .map(
+                {
+                    "Yes": 1,
+                    "Not sure": 0.5,
+                    "No": 0
+                }
+            )
+            .mean()
+            * 100
+        )
+
+        user_reliability_score = (
+            avg_rating / 5 * 40
+            + success_rate * 0.45
+            + recommend_rate * 0.15
+        )
+
+        user_reliability_score = round(
+            min(max(user_reliability_score, 0), 100),
+            2
+        )
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        col1.metric("Reviews Submitted", total_reviews)
+        col2.metric("Avg User Rating", round(avg_rating, 2))
+        col3.metric("Avg Reported Wait", f"{round(avg_wait_time, 1)} min")
+        col4.metric("User Reliability Score", user_reliability_score)
+
+        col5, col6 = st.columns(2)
+
+        col5.metric("Charge Success Rate", f"{round(success_rate, 1)}%")
+        col6.metric("Recommend Rate", f"{round(recommend_rate, 1)}%")
+
+        st.subheader("Recent Feedback")
+
+        st.dataframe(
+            reviews_df,
+            use_container_width=True
+        )
+
+        csv_reviews = reviews_df.to_csv(index=False)
+
+        st.download_button(
+            "Download Session Feedback CSV",
+            csv_reviews,
+            file_name="chargesense_station_feedback.csv",
+            mime="text/csv"
+        )
+
+    st.markdown("""
+    ### How this improves the product
+
+    Public charger metadata can estimate reliability, but it does not always reflect real driver experience.
+
+    User feedback could help future versions measure:
+    - whether chargers actually worked
+    - real waiting time
+    - delivered charging speed
+    - repeated station issues
+    - user confidence in specific charging locations
+
+    In a production version, this feedback could be combined with operator data and OCPI feeds to build a stronger station trust score.
+    """)
+
 # -----------------------------
 # PROJECT INSIGHTS
 # -----------------------------
