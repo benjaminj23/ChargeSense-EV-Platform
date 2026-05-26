@@ -5197,13 +5197,37 @@ elif page == "Station Feedback":
         + feedback_df["state_clean"].astype(str)
     )
 
-    station_options = sorted(feedback_df["station_display_name"].dropna().unique())
+    station_options = sorted(
+        feedback_df["station_display_name"]
+        .dropna()
+        .unique()
+    )
 
     st.subheader("Submit Station Feedback")
 
+    station_search = st.text_input(
+        "Search charging station",
+        placeholder="Search by station name, town, or state. Example: Coolac, Tesla, Barnawartha"
+    )
+
+    if station_search.strip() != "":
+        filtered_station_options = [
+            station
+            for station in station_options
+            if station_search.lower() in station.lower()
+        ]
+    else:
+        filtered_station_options = station_options
+
+    if len(filtered_station_options) == 0:
+        st.warning(
+            "No stations matched your search. Try a different station name, town, or operator."
+        )
+        st.stop()
+
     selected_station_display = st.selectbox(
         "Select charging station",
-        station_options
+        filtered_station_options
     )
 
     selected_station_name = selected_station_display.split(" | ")[0]
@@ -5217,7 +5241,6 @@ elif page == "Station Feedback":
             5,
             4
         )
-
     with col2:
         charger_worked = st.radio(
             "Did the charger work?",
