@@ -4044,12 +4044,14 @@ elif page == "Real Route Optimizer":
                     f"Consider increasing starting battery, reducing the safety buffer, "
                     f"choosing a longer-range EV, or switching to a more conservative charging strategy."
                 )
-            else:
+          else:
                 st.warning(
-                    "Battery may drop below the selected minimum arrival battery on one or more legs. "
-                    "Consider increasing starting battery, using a longer-range EV, reducing the safety buffer, "
-                    "or choosing a different charging strategy."
-                )
+                     "The route planner detected a high-risk charging scenario. "
+                     "This may be because the route requires too many charging stops, charger spacing is weak, "
+                     "or the selected EV/range settings are too restrictive. "
+                     "Consider increasing starting battery, using a longer-range EV, reducing the safety buffer, "
+                     "or choosing a more conservative charging strategy."
+                 )
 
         if len(charging_sequence) == 0:
             st.success(
