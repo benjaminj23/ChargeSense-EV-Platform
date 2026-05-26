@@ -834,68 +834,329 @@ elif page == "Queue Simulation Engine":
 # -----------------------------
 
 elif page == "Reservation Simulation":
-    st.title("🔐 Reservation Simulation")
+
+    st.title("📅 Charging Slot Reservation Simulation")
 
     st.markdown("""
-    Simulate a short reservation window for high-priority EV charging stations.
-    This is a prototype of the booking/access-code concept.
+    Simulate reserving a future EV charging slot at a selected charging station.
+
+    This feature demonstrates how a future version of the platform could support charger reservations,
+    planned arrival times, charging duration estimates, and booking confirmation workflows.
     """)
 
-    top_sites = (
-        nsw_df[["Station_name", "Operator", "reservation_need_index"]]
-        .dropna(subset=["Station_name"])
-        .sort_values("reservation_need_index", ascending=False)
+    st.warning(
+        "Prototype only: this does not reserve a real charging station. "
+        "A production version would require operator APIs, user accounts, payments, and live charger availability."
     )
 
-    selected_station = st.selectbox(
-        "Select Charging Station", top_sites["Station_name"].unique()
-    )
-
-    selected_row = top_sites[top_sites["Station_name"] == selected_station].iloc[0]
-
-    reservation_score = selected_row["reservation_need_index"]
-    operator = selected_row["Operator"]
-
-    col1, col2 = st.columns(2)
-
-    col1.metric("Operator", operator)
-    col2.metric("Reservation Need Score", round(reservation_score, 2))
-
-    if reservation_score >= 13:
-        st.warning(
-            "High reservation priority: limited high-speed charging capacity may create queue pressure."
-        )
-    elif reservation_score >= 10:
-        st.info("Medium reservation priority: booking may help reduce uncertainty.")
-    else:
-        st.success("Lower reservation priority: queue pressure is likely manageable.")
-
-    reservation_minutes = st.slider("Reservation Duration (minutes)", 15, 60, 20)
+    # -----------------------------
+    # Helper functions
+    # -----------------------------
 
     def generate_access_code():
         return str(random.randint(1000, 9999))
 
-    if st.button("Simulate Reservation"):
-        booking_time = datetime.now()
-        expiry_time = booking_time + timedelta(minutes=reservation_minutes)
-        access_code = generate_access_code()
+    def simulate_slot_availability(station_reliability, selected_time_period, expected_duration):
+        if pd.isna(station_reliability):
+            station_reliability = 0
 
-        st.success(f"Reservation confirmed for {selected_station}")
-        st.info(f"Access window: {reservation_minutes} minutes")
+        base_availability = 70
 
-        st.write("Booking time:", booking_time.strftime("%Y-%m-%d %H:%M:%S"))
-        st.write("Expiry time:", expiry_time.strftime("%Y-%m-%d %H:%M:%S"))
+        if station_reliability >= 70:
+            base_availability += 15
+        elif station_reliability >= 40:
+            base_availability += 5
+        else:
+            base_availability -= 15
 
-        st.code(f"ACCESS CODE: {access_code}")
+        if selected_time_period == "Morning Peak":
+            base_availability -= 15
+        elif selected_time_period == "Afternoon Peak":
+            base_availability -= 20
+        elif selected_time_period == "Evening":
+            base_availability -= 10
+        elif selected_time_period == "Holiday / Long Weekend":
+            base_availability -= 30
+        else:
+            base_availability += 10
+
+        if expected_duration > 60:
+            base_availability -= 10
+        elif expected_duration <= 30:
+            base_availability += 5
+
+        availability_score = max(min(base_availability, 100), 0)
+
+        if availability_score >= 70:
+            return "Likely Available", availability_score
+        elif availability_score >= 40:
+            return "Limited Availability", availability_score
+        return "High Booking Risk", availability_score
+
+    # -----------------------------
+    # Prepare station data
+    # -----------------------------
+
+    reservation_df = ocm_df.copy()
+
+    reservation_df["station_name"] = reservation_df["station_name"].fillna("Unknown Station")
+    reservation_df["town"] = reservation_df["town"].fillna("")
+    reservation_df["state_clean"] = reservation_df["state_clean"].fillna("")
+    reservation_df["max_power_kw"] = pd.to_numeric(
+        reservation_df["max_power_kw"],
+        errors="coerce"
+    )
+    reservation_df["reliability_score"] = pd.to_numeric(
+        reservation_df["reliability_score"],
+        errors="coerce"
+    )
+
+    reservation_df["station_display_name"] = (
+        reservation_df["station_name"].astype(str)
+        + " | "
+        + reservation_df["town"].astype(str)
+        + " | "
+        + reservation_df["state_clean"].astype(str)
+    )
+
+    station_options = sorted(
+        reservation_df["station_display_name"]
+        .dropna()
+        .unique()
+    )
+
+    # -----------------------------
+    # Inputs
+    # -----------------------------
+
+    st.subheader("Select Charging Station")
+
+    station_search = st.text_input(
+        "Search charging station",
+        placeholder="Search by station name, town, or state. Example: Tesla, Coolac, Barnawartha"
+    )
+
+    if station_search.strip() != "":
+        filtered_station_options = [
+            station
+            for station in station_options
+            if station_search.lower() in station.lower()
+        ]
+    else:
+        filtered_station_options = station_options
+
+    if len(filtered_station_options) == 0:
+        st.warning(
+            "No stations matched your search. Try a different station name, town, or operator."
+        )
+        st.stop()
+
+    selected_station_display = st.selectbox(
+        "Select station",
+        filtered_station_options
+    )
+
+    selected_station_name = selected_station_display.split(" | ")[0]
+
+    selected_station_rows = reservation_df[
+        reservation_df["station_display_name"] == selected_station_display
+    ].copy()
+
+    if len(selected_station_rows) == 0:
+        st.error("Selected station could not be found.")
+        st.stop()
+
+    selected_station = selected_station_rows.iloc[0]
+
+    st.subheader("Reservation Details")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        reservation_date = st.date_input(
+            "Reservation date"
+        )
+
+    with col2:
+        reservation_time = st.time_input(
+            "Reservation time"
+        )
+
+    col3, col4 = st.columns(2)
+
+    with col3:
+        expected_duration_min = st.slider(
+            "Expected charging duration (minutes)",
+            15,
+            120,
+            45,
+            5
+        )
+
+    with col4:
+        selected_time_period = st.selectbox(
+            "Expected demand period",
+            [
+                "Off-peak",
+                "Morning Peak",
+                "Daytime",
+                "Afternoon Peak",
+                "Evening",
+                "Holiday / Long Weekend"
+            ]
+        )
+
+    ev_options = [
+        "Tesla Model 3 RWD",
+        "Tesla Model Y RWD",
+        "BYD Atto 3",
+        "BYD Seal",
+        "Kia EV6",
+        "Hyundai Ioniq 5",
+        "MG4 Excite 51",
+        "Other EV"
+    ]
+
+    selected_ev = st.selectbox(
+        "Vehicle",
+        ev_options
+    )
+
+    driver_name = st.text_input(
+        "Driver name",
+        placeholder="Example: Benjamin Joseph"
+    )
+
+    vehicle_plate = st.text_input(
+        "Vehicle plate / reference",
+        placeholder="Optional"
+    )
+
+    st.subheader("Station Snapshot")
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "Station",
+        selected_station_name[:22] + "..." if len(selected_station_name) > 22 else selected_station_name
+    )
+
+    col2.metric(
+        "Max Power",
+        f"{round(selected_station.get('max_power_kw', 0), 1)} kW"
+        if pd.notna(selected_station.get("max_power_kw", None))
+        else "Unknown"
+    )
+
+    col3.metric(
+        "Reliability Score",
+        round(selected_station.get("reliability_score", 0), 1)
+        if pd.notna(selected_station.get("reliability_score", None))
+        else "Unknown"
+    )
+
+    # -----------------------------
+    # Simulate availability
+    # -----------------------------
+
+    simulate_booking = st.button("Check Simulated Slot Availability")
+
+    if simulate_booking:
+
+        station_reliability = selected_station.get("reliability_score", 0)
+
+        slot_status, slot_score = simulate_slot_availability(
+            station_reliability,
+            selected_time_period,
+            expected_duration_min
+        )
+
+        st.subheader("Simulated Slot Availability Result")
+
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric(
+            "Slot Status",
+            slot_status
+        )
+
+        col2.metric(
+            "Booking Confidence Score",
+            f"{slot_score}/100"
+        )
+
+        col3.metric(
+            "Expected Duration",
+            f"{expected_duration_min} min"
+        )
+
+        if slot_status == "Likely Available":
+            st.success(
+                "This simulated slot is likely to be available based on station reliability, demand period, and expected charging duration."
+            )
+        elif slot_status == "Limited Availability":
+            st.warning(
+                "This simulated slot may have limited availability. Consider choosing a different time or allowing extra wait time."
+            )
+        else:
+            st.error(
+                "This simulated slot has high booking risk. Consider selecting an off-peak time or another station."
+            )
+
+        # -----------------------------
+        # Simulated booking confirmation
+        # -----------------------------
+
+        st.subheader("Simulated Reservation Confirmation")
+
+        booking_code = generate_access_code()
+
+        reservation_summary = f"""
+Reservation Type: Simulated EV Charging Slot
+Booking Code: EV-{booking_code}
+
+Station: {selected_station_display}
+Vehicle: {selected_ev}
+Driver: {driver_name if driver_name.strip() != "" else "Not provided"}
+Vehicle Plate / Reference: {vehicle_plate if vehicle_plate.strip() != "" else "Not provided"}
+
+Reservation Date: {reservation_date}
+Reservation Time: {reservation_time}
+Expected Charging Duration: {expected_duration_min} minutes
+Expected Demand Period: {selected_time_period}
+
+Slot Status: {slot_status}
+Booking Confidence Score: {slot_score}/100
+
+Important Note:
+This is a simulated reservation only. It does not reserve a real charging station.
+A production version would require operator integration, live charger availability, user accounts, and payment/session control.
+"""
+
+        st.code(reservation_summary)
+
+        st.download_button(
+            "Download Simulated Reservation",
+            reservation_summary,
+            file_name="simulated_ev_charging_reservation.txt"
+        )
 
         st.markdown("""
-        ### Reservation Rules
+        ### How this could work in a production version
 
-        - Access code is valid only during the reservation window.
-        - If the driver does not arrive before expiry, the charger is released.
-        - Future versions could include no-show penalties and  queue priority rules.
+        A real reservation system would need:
+
+        - live charger availability from operators
+        - connector-level booking support
+        - user accounts
+        - payment or pre-authorisation
+        - cancellation and no-show rules
+        - charger access control
+        - integration through operator APIs or OCPI
+        - live delay handling if the driver arrives late
+
+        This prototype demonstrates the user workflow and decision logic, not real station booking.
         """)
-
 # -----------------------------
 # CONGESTION RISK ANALYSIS
 # -----------------------------
