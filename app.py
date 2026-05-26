@@ -3882,35 +3882,22 @@ elif page == "Real Route Optimizer":
 
             while target_distance < distance_km:
 
+                route_index = min(
+                    int((target_distance / distance_km) * (len(route_df) - 1)),
+                    len(route_df) - 1
+                )
+
+                target_lat = route_df.iloc[route_index]["latitude"]
+                target_lon = route_df.iloc[route_index]["longitude"]
+
                 candidate_stops = near_route_df.copy()
 
                 candidate_stops["distance_to_target_km"] = candidate_stops.apply(
-                    lambda row: min(
-                        abs(
-                            haversine_distance(
-                                row["latitude"],
-                                row["longitude"],
-                                route_df.iloc[
-                                    min(
-                                        int(
-                                            (target_distance / distance_km)
-                                            * (len(route_df) - 1)
-                                        ),
-                                        len(route_df) - 1
-                                    )
-                                ]["latitude"],
-                                route_df.iloc[
-                                    min(
-                                        int(
-                                            (target_distance / distance_km)
-                                            * (len(route_df) - 1)
-                                        ),
-                                        len(route_df) - 1
-                                    )
-                                ]["longitude"]
-                            )
-                        ),
-                        9999
+                    lambda row: haversine_distance(
+                        row["latitude"],
+                        row["longitude"],
+                        target_lat,
+                        target_lon
                     ),
                     axis=1
                 )
@@ -4022,7 +4009,7 @@ elif page == "Real Route Optimizer":
                     battery_warning_triggered = True
                     break
 
-                if battery_warning_triggered:
+        if battery_warning_triggered:
             low_arrival_stops = [
                 stop for stop in charging_sequence
                 if stop.get("arrival_battery_%", 100) < minimum_arrival_percent
@@ -4044,6 +4031,7 @@ elif page == "Real Route Optimizer":
                     f"Consider increasing starting battery, reducing the safety buffer, "
                     f"choosing a longer-range EV, or switching to a more conservative charging strategy."
                 )
+
             else:
                 st.warning(
                     "The route planner detected a high-risk charging scenario. "
@@ -4052,6 +4040,7 @@ elif page == "Real Route Optimizer":
                     "Consider increasing starting battery, using a longer-range EV, reducing the safety buffer, "
                     "or choosing a more conservative charging strategy."
                 )
+
         if len(charging_sequence) == 0:
             st.success(
                 "No charging stop required based on selected EV range."
@@ -4061,6 +4050,7 @@ elif page == "Real Route Optimizer":
             total_charging_cost_aud = 0
             total_energy_added_kwh = 0
             total_trip_time_hours = duration_hours
+            cost_per_100_km = 0
 
         else:
             sequence_df = pd.DataFrame(charging_sequence)
@@ -4154,12 +4144,8 @@ elif page == "Real Route Optimizer":
 
         if len(charging_sequence) == 0:
             charging_stops_count = 0
-            cost_per_100_km = 0
         else:
             charging_stops_count = len(sequence_df)
-            cost_per_100_km = (
-                total_charging_cost_aud / distance_km
-            ) * 100
 
         trip_summary = f"""
 Route: {start_label} → {destination_label}
@@ -4171,6 +4157,7 @@ Weather: {weather_mode}
 Strategy: {charging_strategy}
 Charging Stops: {charging_stops_count}
 Total Charging Time: {round(total_charging_time_min, 1)} min
+Estimated Energy Added: {round(total_energy_added_kwh, 1)} kWh
 Estimated Charging Cost: ${round(total_charging_cost_aud, 2)}
 Estimated Cost per 100 km: ${round(cost_per_100_km, 2)}
 Estimated Total Trip Time: {round(total_trip_time_hours, 1)} hrs
@@ -4245,7 +4232,6 @@ Corridor Risk Score: {corridor_risk_score}
             fig,
             use_container_width=True
         )
-
 
 # -----------------------------
 # PROJECT INSIGHTS
