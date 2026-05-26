@@ -4000,18 +4000,19 @@ elif page == "Real Route Optimizer":
                     )
                 })
 
-            if battery_warning_triggered:
-                low_arrival_stops = sequence_df[
-                    sequence_df["arrival_battery_%"] < minimum_arrival_percent
-                ].copy()
+          if battery_warning_triggered:
+                low_arrival_stops = [
+                    stop for stop in charging_sequence
+                    if stop.get("arrival_battery_%", 100) < minimum_arrival_percent
+                ]
 
                 if len(low_arrival_stops) > 0:
                     affected_stops = ", ".join(
                         [
-                            f"Stop {int(row['stop_number'])} "
-                            f"({row['station_name']}: "
-                            f"{round(row['arrival_battery_%'], 1)}%)"
-                            for _, row in low_arrival_stops.iterrows()
+                            f"Stop {int(stop.get('stop_number', 0))} "
+                            f"({stop.get('station_name', 'Unknown Station')}: "
+                            f"{round(stop.get('arrival_battery_%', 0), 1)}%)"
+                            for stop in low_arrival_stops
                         ]
                     )
 
