@@ -1,7 +1,7 @@
 # ChargeSense EV Infrastructure Intelligence Platform
 # © 2026 Benjamin Joseph. All rights reserved.
 # This code is for portfolio and  demonstration purposes only.
-import random
+import random 
 import math 
 import requests 
 import numpy as np
@@ -3238,6 +3238,9 @@ elif page == "Real Route Optimizer":
     def simulated_availability(row):
         reliability = row.get("reliability_score", 0)
 
+        if pd.isna(reliability):
+            reliability = 0
+
         if reliability >= 70:
             return "Available"
         elif reliability >= 40:
@@ -3307,6 +3310,63 @@ elif page == "Real Route Optimizer":
         elif score >= 30:
             return "Medium Amenity Stop"
         return "Basic Stop"
+
+    def estimate_wait_time_minutes(row, route_demand_level, trip_time_period):
+        base_wait = 0
+
+        availability_status = row.get("availability_status", "Unknown")
+        reliability = row.get("reliability_score", 0)
+        amenity = row.get("amenity_score", 0)
+        charger_power = row.get("max_power_kw", 0)
+
+        if pd.isna(reliability):
+            reliability = 0
+
+        if pd.isna(amenity):
+            amenity = 0
+
+        if pd.isna(charger_power):
+            charger_power = 0
+
+        if availability_status == "Available":
+            base_wait += 3
+        elif availability_status == "Busy":
+            base_wait += 18
+        elif availability_status == "Unknown":
+            base_wait += 10
+        else:
+            base_wait += 25
+
+        if route_demand_level == "Low":
+            base_wait += 0
+        elif route_demand_level == "Medium":
+            base_wait += 8
+        elif route_demand_level == "High":
+            base_wait += 18
+
+        if trip_time_period == "Off-peak":
+            base_wait += 0
+        elif trip_time_period == "Daytime":
+            base_wait += 5
+        elif trip_time_period == "Peak":
+            base_wait += 12
+        elif trip_time_period == "Holiday / Long Weekend":
+            base_wait += 25
+
+        if reliability >= 70:
+            base_wait -= 4
+        elif reliability < 30:
+            base_wait += 8
+
+        if amenity >= 60:
+            base_wait += 5
+
+        if charger_power >= 250:
+            base_wait -= 3
+        elif charger_power < 50:
+            base_wait += 6
+
+        return round(max(base_wait, 0), 1)
 
     def haversine_distance(lat1, lon1, lat2, lon2):
         radius_km = 6371
@@ -3462,9 +3522,11 @@ elif page == "Real Route Optimizer":
             st.session_state.route_stop_count = 1
 
         add_route_stops = st.checkbox(
-            "Add route stops / waypoints", 
-            value=False 
+            "Add route stops / waypoints",
+            value=False
         )
+
+        waypoint_inputs = []
 
         if add_route_stops:
             st.markdown("#### Route Stops")
@@ -3572,6 +3634,33 @@ elif page == "Real Route Optimizer":
             "Target Battery Strategy",
             f"{target_battery_percent}%"
         )
+
+    st.subheader("Demand & Wait Time Settings")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        route_demand_level = st.selectbox(
+            "Expected Route Demand",
+            ["Low", "Medium", "High"],
+            index=1
+        )
+
+    with col2:
+        trip_time_period = st.selectbox(
+            "Trip Time Period",
+            [
+                "Off-peak",
+                "Daytime",
+                "Peak",
+                "Holiday / Long Weekend"
+            ],
+            index=1
+        )
+
+    st.caption(
+        "Wait time is currently estimated from demand level, time period, simulated availability, reliability, charger speed, and amenity attractiveness. It is not live queue data."
+    )
 
     st.subheader("Cost Settings")
 
@@ -3921,7 +4010,16 @@ elif page == "Real Route Optimizer":
         st.subheader("Recommended Charging Stops Near Route")
 
         st.caption(
-            "Availability status is currently simulated from reliability indicators and data freshness. Future versions can replace this with live operator API data."
+            "Availability status, wait time, and queue pressure are estimated from public metadata and scenario assumptions. Future versions can replace this with live operator API or OCPI data."
+        )
+
+        recommended_stops["estimated_wait_time_min"] = recommended_stops.apply(
+            lambda row: estimate_wait_time_minutes(
+                row,
+                route_demand_level,
+                trip_time_period
+            ),
+            axis=1
         )
 
         st.dataframe(
@@ -3933,6 +4031,7 @@ elif page == "Real Route Optimizer":
                     "max_power_kw",
                     "reliability_score",
                     "availability_status",
+                    "estimated_wait_time_min",
                     "availability_score",
                     "amenity_label",
                     "amenity_score",
@@ -4077,6 +4176,16 @@ elif page == "Real Route Optimizer":
                     energy_needed_kwh / effective_charger_power_kw
                 ) * 60
 
+                estimated_wait_time_min = estimate_wait_time_minutes(
+                    best_stop,
+                    route_demand_level,
+                    trip_time_period
+                )
+
+                total_stop_time_min = (
+                    estimated_wait_time_min + estimated_charge_time_min
+                )
+
                 estimated_charge_cost_aud = (
                     energy_needed_kwh * electricity_price_per_kwh
                 )
@@ -4096,8 +4205,10 @@ elif page == "Real Route Optimizer":
                     "route_score": best_stop.get("route_score", 0),
                     "arrival_battery_%": round(arrival_battery_percent, 1),
                     "departure_battery_%": round(departure_battery_percent, 1),
+                    "estimated_wait_time_min": round(estimated_wait_time_min, 1),
                     "estimated_charge_kwh": round(energy_needed_kwh, 1),
                     "estimated_charge_time_min": round(estimated_charge_time_min, 1),
+                    "total_stop_time_min": round(total_stop_time_min, 1),
                     "estimated_charge_cost_aud": round(estimated_charge_cost_aud, 2),
                     "distance_to_target_km": round(best_stop["distance_to_target_km"], 1)
                 })
@@ -4149,6 +4260,8 @@ elif page == "Real Route Optimizer":
             )
 
             total_charging_time_min = 0
+            total_wait_time_min = 0
+            total_stop_time_min = 0
             total_charging_cost_aud = 0
             total_energy_added_kwh = 0
             total_trip_time_hours = duration_hours
@@ -4161,6 +4274,14 @@ elif page == "Real Route Optimizer":
                 "estimated_charge_time_min"
             ].sum()
 
+            total_wait_time_min = sequence_df[
+                "estimated_wait_time_min"
+            ].sum()
+
+            total_stop_time_min = sequence_df[
+                "total_stop_time_min"
+            ].sum()
+
             total_charging_cost_aud = sequence_df[
                 "estimated_charge_cost_aud"
             ].sum()
@@ -4170,14 +4291,14 @@ elif page == "Real Route Optimizer":
             ].sum()
 
             total_trip_time_hours = (
-                duration_hours + total_charging_time_min / 60
+                duration_hours + total_stop_time_min / 60
             )
 
             cost_per_100_km = (
                 total_charging_cost_aud / distance_km
             ) * 100
 
-            col1, col2, col3, col4, col5 = st.columns(5)
+            col1, col2, col3 = st.columns(3)
 
             col1.metric(
                 "Charging Stops",
@@ -4185,21 +4306,33 @@ elif page == "Real Route Optimizer":
             )
 
             col2.metric(
+                "Total Wait Time",
+                f"{round(total_wait_time_min, 1)} min"
+            )
+
+            col3.metric(
                 "Total Charging Time",
                 f"{round(total_charging_time_min, 1)} min"
             )
 
-            col3.metric(
+            col4, col5, col6 = st.columns(3)
+
+            col4.metric(
+                "Total Stop Time",
+                f"{round(total_stop_time_min, 1)} min"
+            )
+
+            col5.metric(
                 "Total Trip Time",
                 f"{round(total_trip_time_hours, 1)} hrs"
             )
 
-            col4.metric(
+            col6.metric(
                 "Charging Cost",
                 f"${round(total_charging_cost_aud, 2)}"
             )
 
-            col5.metric(
+            st.metric(
                 "Cost / 100 km",
                 f"${round(cost_per_100_km, 2)}"
             )
@@ -4220,10 +4353,12 @@ elif page == "Real Route Optimizer":
 
                     - Charger speed: **{stop["max_power_kw"]} kW**
                     - Availability estimate: **{stop["availability_status"]}**
+                    - Estimated wait before charging: **{stop["estimated_wait_time_min"]} minutes**
+                    - Estimated charging time: **{stop["estimated_charge_time_min"]} minutes**
+                    - Total estimated stop time: **{stop["total_stop_time_min"]} minutes**
                     - Amenity type: **{stop["amenity_label"]}**
                     - Expected arrival battery: **{stop["arrival_battery_%"]}%**
                     - Expected departure battery: **{stop["departure_battery_%"]}%**
-                    - Estimated charging time: **{stop["estimated_charge_time_min"]} minutes**
                     - Estimated charging cost: **${stop["estimated_charge_cost_aud"]}**
                     - Detour from target point: **{stop["distance_to_target_km"]} km**
                     """
@@ -4258,8 +4393,12 @@ Drive Time: {round(duration_hours, 1)} hrs
 Adjusted EV Range: {round(adjusted_range_km, 1)} km
 Weather: {weather_mode}
 Strategy: {charging_strategy}
+Route Demand Level: {route_demand_level}
+Trip Time Period: {trip_time_period}
 Charging Stops: {charging_stops_count}
+Total Wait Time: {round(total_wait_time_min, 1)} min
 Total Charging Time: {round(total_charging_time_min, 1)} min
+Total Stop Time: {round(total_stop_time_min, 1)} min
 Estimated Energy Added: {round(total_energy_added_kwh, 1)} kWh
 Estimated Charging Cost: ${round(total_charging_cost_aud, 2)}
 Estimated Cost per 100 km: ${round(cost_per_100_km, 2)}
@@ -4300,6 +4439,7 @@ Corridor Risk Score: {corridor_risk_score}
                 "max_power_kw",
                 "reliability_score",
                 "availability_status",
+                "estimated_wait_time_min",
                 "amenity_label",
                 "route_recommendation_score",
                 "distance_to_route_km"
@@ -4335,7 +4475,6 @@ Corridor Risk Score: {corridor_risk_score}
             fig,
             use_container_width=True
         )
-
 
 elif page == "Data Reality & Production Needs":
 
