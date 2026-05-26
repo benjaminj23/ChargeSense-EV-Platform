@@ -3177,58 +3177,17 @@ elif page == "Real Route Optimizer":
 
     st.title("🛰️ Real Route Optimizer")
 
-    st.markdown("""
-    Generate a real driving route and  identify high-quality EV charging stations near the route.
+    st.markdown(
+        "Generate a real driving route and identify high-quality EV charging stations near the route."
+    )
 
-    Use **Major City Mode** for quick routes, or **Custom Place Mode** for suburb/place-level routing.
-    """)
+    st.markdown(
+        "Use **Major City Mode** for quick routes, or **Custom Place Mode** for suburb/place-level routing."
+    )
 
-    city_coordinates = {
-        "Sydney": [151.2093, -33.8688],
-        "Melbourne": [144.9631, -37.8136],
-        "Brisbane": [153.0251, -27.4698],
-        "Adelaide": [138.6007, -34.9285],
-        "Perth": [115.8605, -31.9505],
-        "Canberra": [149.1300, -35.2809],
-        "Hobart": [147.3272, -42.8821],
-        "Darwin": [130.8456, -12.4634],
-        "Gold Coast": [153.4000, -28.0167],
-        "Newcastle": [151.7817, -32.9283],
-        "Wollongong": [150.8931, -34.4278],
-        "Geelong": [144.3617, -38.1499]
-    }
-
-    ev_profiles = {
-        "Tesla Model 3 RWD": {"battery_kwh": 60, "range_km": 513},
-        "Tesla Model Y RWD": {"battery_kwh": 60, "range_km": 455},
-        "BYD Atto 3": {"battery_kwh": 60.5, "range_km": 420},
-        "BYD Seal": {"battery_kwh": 82.5, "range_km": 570},
-        "Kia EV6": {"battery_kwh": 77.4, "range_km": 528},
-        "Hyundai Ioniq 5": {"battery_kwh": 77.4, "range_km": 507},
-        "MG4 Excite 51": {"battery_kwh": 51, "range_km": 350}
-    }
-
-    def haversine_distance(lat1, lon1, lat2, lon2):
-        import math
-
-        radius_km = 6371
-
-        lat1 = math.radians(lat1)
-        lon1 = math.radians(lon1)
-        lat2 = math.radians(lat2)
-        lon2 = math.radians(lon2)
-
-        dlat = lat2 - lat1
-        dlon = lon2 - lon1
-
-        a = (
-            math.sin(dlat / 2) ** 2
-            + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
-        )
-
-        c = 2 * math.asin(math.sqrt(a))
-
-        return radius_km * c
+    # -----------------------------
+    # Helper functions
+    # -----------------------------
 
     def geocode_place(place_name):
         url = "https://nominatim.openstreetmap.org/search"
@@ -3251,7 +3210,6 @@ elif page == "Real Route Optimizer":
                 headers=headers,
                 timeout=20
             )
-
         except requests.exceptions.RequestException as e:
             st.error("Could not connect to geocoding service.")
             st.write(str(e))
@@ -3287,7 +3245,7 @@ elif page == "Real Route Optimizer":
         else:
             return "Offline"
 
-    def calculate_amenity_score(row):
+    def amenity_score(row):
         text = " ".join(
             [
                 str(row.get("station_name", "")),
@@ -3346,8 +3304,107 @@ elif page == "Real Route Optimizer":
             return "High Amenity Stop"
         elif score >= 30:
             return "Medium Amenity Stop"
-        else:
-            return "Basic Stop"
+        return "Basic Stop"
+
+    def haversine_distance(lat1, lon1, lat2, lon2):
+        radius_km = 6371
+
+        lat1 = math.radians(lat1)
+        lon1 = math.radians(lon1)
+        lat2 = math.radians(lat2)
+        lon2 = math.radians(lon2)
+
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+
+        a = (
+            math.sin(dlat / 2) ** 2
+            + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        )
+
+        c = 2 * math.asin(math.sqrt(a))
+
+        return radius_km * c
+
+    def min_distance_to_route(charger_lat, charger_lon, route_df):
+        distances = route_df.apply(
+            lambda row: haversine_distance(
+                charger_lat,
+                charger_lon,
+                row["latitude"],
+                row["longitude"]
+            ),
+            axis=1
+        )
+
+        return distances.min()
+
+    # -----------------------------
+    # City and EV setup
+    # -----------------------------
+
+    city_coordinates = {
+        "Sydney": [151.2093, -33.8688],
+        "Melbourne": [144.9631, -37.8136],
+        "Brisbane": [153.0251, -27.4698],
+        "Adelaide": [138.6007, -34.9285],
+        "Perth": [115.8605, -31.9505],
+        "Canberra": [149.1300, -35.2809],
+        "Hobart": [147.3272, -42.8821],
+        "Darwin": [130.8456, -12.4634],
+        "Gold Coast": [153.4000, -28.0167],
+        "Newcastle": [151.7817, -32.9283],
+        "Wollongong": [150.8931, -34.4278],
+        "Geelong": [144.3617, -38.1499]
+    }
+
+    ev_profiles = {
+        "Tesla Model 3 RWD": {
+            "battery_kwh": 60,
+            "range_km": 513
+        },
+        "Tesla Model Y RWD": {
+            "battery_kwh": 60,
+            "range_km": 455
+        },
+        "BYD Atto 3": {
+            "battery_kwh": 60.5,
+            "range_km": 420
+        },
+        "BYD Seal": {
+            "battery_kwh": 82.5,
+            "range_km": 570
+        },
+        "Kia EV6": {
+            "battery_kwh": 77.4,
+            "range_km": 528
+        },
+        "Hyundai Ioniq 5": {
+            "battery_kwh": 77.4,
+            "range_km": 507
+        },
+        "MG4 Excite 51": {
+            "battery_kwh": 51,
+            "range_km": 350
+        }
+    }
+
+    weather_multipliers = {
+        "Normal": 1.00,
+        "Cold Weather": 0.82,
+        "Heavy Rain": 0.88,
+        "Extreme Heat": 0.90
+    }
+
+    strategy_targets = {
+        "Conservative": 80,
+        "Fastest Trip": 60,
+        "Fewest Stops": 90
+    }
+
+    # -----------------------------
+    # Inputs
+    # -----------------------------
 
     route_input_mode = st.radio(
         "Route Input Mode",
@@ -3356,7 +3413,6 @@ elif page == "Real Route Optimizer":
     )
 
     if route_input_mode == "Major City":
-
         cities = sorted(city_coordinates.keys())
 
         col1, col2 = st.columns(2)
@@ -3375,13 +3431,13 @@ elif page == "Real Route Optimizer":
                 index=cities.index("Melbourne")
             )
 
-        start_label = start_city
-        destination_label = destination_city
         start_coords = city_coordinates[start_city]
         end_coords = city_coordinates[destination_city]
 
-    else:
+        start_label = start_city
+        destination_label = destination_city
 
+    else:
         col1, col2 = st.columns(2)
 
         with col1:
@@ -3396,23 +3452,25 @@ elif page == "Real Route Optimizer":
                 "Wollongong NSW"
             )
 
-        start_label = start_place
-        destination_label = destination_place
         start_coords = None
         end_coords = None
+
+        start_label = start_place
+        destination_label = destination_place
 
     st.subheader("EV Trip Settings")
 
     selected_ev = st.selectbox(
         "Select EV Model",
-        list(ev_profiles.keys())
+        list(ev_profiles.keys()),
+        index=list(ev_profiles.keys()).index("Tesla Model Y RWD")
     )
 
     battery_kwh = ev_profiles[selected_ev]["battery_kwh"]
-    ev_range_km = ev_profiles[selected_ev]["range_km"]
+    base_range_km = ev_profiles[selected_ev]["range_km"]
 
     st.info(
-        f"{selected_ev}: {battery_kwh} kWh battery, approx. {ev_range_km} km driving range."
+        f"{selected_ev}: {battery_kwh} kWh battery, approx. {base_range_km} km driving range."
     )
 
     charging_strategy = st.selectbox(
@@ -3420,38 +3478,15 @@ elif page == "Real Route Optimizer":
         ["Conservative", "Fastest Trip", "Fewest Stops"]
     )
 
-    if charging_strategy == "Conservative":
-        dynamic_charge_to_percent = 80
-    elif charging_strategy == "Fastest Trip":
-        dynamic_charge_to_percent = 60
-    else:
-        dynamic_charge_to_percent = 90
-
     weather_mode = st.selectbox(
         "Weather Conditions",
-        [
-            "Normal",
-            "Cold Weather",
-            "Heavy Rain",
-            "Extreme Heat"
-        ]
+        ["Normal", "Cold Weather", "Heavy Rain", "Extreme Heat"]
     )
-
-    weather_range_multiplier = 1.0
-
-    if weather_mode == "Cold Weather":
-        weather_range_multiplier = 0.82
-    elif weather_mode == "Heavy Rain":
-        weather_range_multiplier = 0.88
-    elif weather_mode == "Extreme Heat":
-        weather_range_multiplier = 0.90
-
-    adjusted_ev_range_km = ev_range_km * weather_range_multiplier
 
     col1, col2 = st.columns(2)
 
     with col1:
-        route_buffer_km = st.slider(
+        max_distance_from_route_km = st.slider(
             "Maximum Distance from Route (km)",
             5,
             50,
@@ -3461,8 +3496,8 @@ elif page == "Real Route Optimizer":
     with col2:
         safety_buffer_km = st.slider(
             "Safety Buffer Before Charging (km)",
-            20,
-            100,
+            10,
+            120,
             50
         )
 
@@ -3471,13 +3506,13 @@ elif page == "Real Route Optimizer":
     with col1:
         starting_battery_percent = st.slider(
             "Starting Battery (%)",
-            20,
+            10,
             100,
             90
         )
 
     with col2:
-        charge_from_percent = st.slider(
+        minimum_arrival_percent = st.slider(
             "Minimum Arrival Battery at Stop (%)",
             5,
             50,
@@ -3485,9 +3520,10 @@ elif page == "Real Route Optimizer":
         )
 
     with col3:
+        target_battery_percent = strategy_targets[charging_strategy]
         st.metric(
             "Target Battery Strategy",
-            f"{dynamic_charge_to_percent}%"
+            f"{target_battery_percent}%"
         )
 
     st.subheader("Cost Settings")
@@ -3500,34 +3536,24 @@ elif page == "Real Route Optimizer":
         0.05
     )
 
-    if st.button("Generate Real Route"):
+    generate_route = st.button("Generate Real Route")
 
-        if dynamic_charge_to_percent <= charge_from_percent:
-            st.warning("Charging strategy target must be higher than minimum arrival battery.")
-            st.stop()
+    # -----------------------------
+    # Route generation
+    # -----------------------------
 
-        if route_input_mode == "Major City":
+    if generate_route:
 
-            if start_label == destination_label:
-                st.warning("Start city and  destination city cannot be the same.")
-                st.stop()
-
-        else:
-
-            if start_place.strip() == "" or destination_place.strip() == "":
-                st.warning("Please enter both a start location and  destination.")
-                st.stop()
-
-            with st.spinner("Finding locations..."):
-                start_geo = geocode_place(start_place)
-                destination_geo = geocode_place(destination_place)
+        if route_input_mode == "Custom Place":
+            start_geo = geocode_place(start_place)
+            destination_geo = geocode_place(destination_place)
 
             if start_geo is None:
-                st.error(f"Could not find start location: {start_place}")
+                st.error("Could not find the start location.")
                 st.stop()
 
             if destination_geo is None:
-                st.error(f"Could not find destination: {destination_place}")
+                st.error("Could not find the destination location.")
                 st.stop()
 
             start_coords = [
@@ -3546,385 +3572,355 @@ elif page == "Real Route Optimizer":
             st.info(f"Start matched to: {start_label}")
             st.info(f"Destination matched to: {destination_label}")
 
-        with st.spinner("Calculating route..."):
+        if start_coords == end_coords:
+            st.warning("Start and destination cannot be the same.")
+            st.stop()
 
-            url = (
-                f"https://router.project-osrm.org/route/v1/driving/"
-                f"{start_coords[0]},{start_coords[1]};"
-                f"{end_coords[0]},{end_coords[1]}"
+        url = (
+            f"https://router.project-osrm.org/route/v1/driving/"
+            f"{start_coords[0]},{start_coords[1]};"
+            f"{end_coords[0]},{end_coords[1]}"
+        )
+
+        params = {
+            "overview": "full",
+            "geometries": "geojson"
+        }
+
+        try:
+            response = requests.get(
+                url,
+                params=params,
+                timeout=30
             )
+        except requests.exceptions.RequestException as e:
+            st.error("Could not connect to OSRM routing service.")
+            st.write(str(e))
+            st.stop()
 
-            params = {
-                "overview": "full",
-                "geometries": "geojson"
-            }
+        if response.status_code != 200:
+            st.error(f"Routing Error {response.status_code}")
+            st.write(response.text)
+            st.stop()
 
-            try:
-                response = requests.get(
-                    url,
-                    params=params,
-                    timeout=30
-                )
+        route_data = response.json()
 
-            except requests.exceptions.RequestException as e:
-                st.error("Could not connect to OSRM routing service.")
-                st.write(str(e))
-                st.stop()
+        if "routes" not in route_data or len(route_data["routes"]) == 0:
+            st.error("No route found.")
+            st.stop()
 
-            if response.status_code != 200:
-                st.error(f"OSRM Error {response.status_code}")
-                st.write(response.text)
-                st.stop()
+        route = route_data["routes"][0]
 
-            route_data = response.json()
+        route_coords = route["geometry"]["coordinates"]
 
-            if "routes" not in route_data or len(route_data["routes"]) == 0:
-                st.error("No route found.")
-                st.stop()
+        route_df = pd.DataFrame(
+            route_coords,
+            columns=["longitude", "latitude"]
+        )
 
-            route = route_data["routes"][0]
+        distance_km = route["distance"] / 1000
+        duration_hours = route["duration"] / 3600
 
-            route_coords = route["geometry"]["coordinates"]
+        weather_multiplier = weather_multipliers[weather_mode]
+        adjusted_range_km = base_range_km * weather_multiplier
 
-            route_df = pd.DataFrame(
-                route_coords,
-                columns=["longitude", "latitude"]
-            )
+        st.success(
+            f"Route generated from {start_label} to {destination_label}"
+        )
 
-            distance_km = route["distance"] / 1000
-            duration_hours = route["duration"] / 3600
+        col1, col2, col3 = st.columns(3)
 
-            st.success(
-                f"Route generated from {start_label} to {destination_label}"
-            )
+        col1.metric(
+            "Route Distance",
+            f"{round(distance_km, 1)} km"
+        )
 
-            metric_col1, metric_col2, metric_col3 = st.columns(3)
+        col2.metric(
+            "Estimated Drive Time",
+            f"{round(duration_hours, 1)} hrs"
+        )
 
-            metric_col1.metric(
-                "Route Distance",
-                f"{round(distance_km, 1)} km"
-            )
+        col3.metric(
+            "Adjusted EV Range",
+            f"{round(adjusted_range_km, 1)} km"
+        )
 
-            metric_col2.metric(
-                "Estimated Drive Time",
-                f"{round(duration_hours, 1)} hrs"
-            )
+        # -----------------------------
+        # Prepare route charger data
+        # -----------------------------
 
-            metric_col3.metric(
-                "Adjusted EV Range",
-                f"{round(adjusted_ev_range_km, 1)} km"
-            )
+        route_map_df = ocm_df.copy()
 
-            route_map_df = ocm_df.copy()
+        route_map_df["latitude"] = pd.to_numeric(
+            route_map_df["latitude"],
+            errors="coerce"
+        )
 
-            route_map_df["latitude"] = pd.to_numeric(
-                route_map_df["latitude"],
-                errors="coerce"
-            )
+        route_map_df["longitude"] = pd.to_numeric(
+            route_map_df["longitude"],
+            errors="coerce"
+        )
 
-            route_map_df["longitude"] = pd.to_numeric(
-                route_map_df["longitude"],
-                errors="coerce"
-            )
+        route_map_df["max_power_kw"] = pd.to_numeric(
+            route_map_df["max_power_kw"],
+            errors="coerce"
+        )
 
-            route_map_df["max_power_kw"] = pd.to_numeric(
-                route_map_df["max_power_kw"],
-                errors="coerce"
-            )
+        route_map_df["reliability_score"] = pd.to_numeric(
+            route_map_df["reliability_score"],
+            errors="coerce"
+        )
 
-            route_map_df = route_map_df.dropna(
-                subset=["latitude", "longitude"]
-            )
+        route_map_df = route_map_df.dropna(
+            subset=[
+                "latitude",
+                "longitude"
+            ]
+        )
 
-            route_map_df["route_score"] = (
-                route_map_df["max_power_kw"].fillna(0) * 0.6
-                + route_map_df["reliability_score"].fillna(0) * 0.4
-            )
+        sampled_route_df = route_df.iloc[
+            ::max(1, int(len(route_df) / 250))
+        ].copy()
 
-            route_map_df["availability_status"] = (
-                route_map_df.apply(simulated_availability, axis=1)
-            )
+        route_map_df["distance_to_route_km"] = route_map_df.apply(
+            lambda row: min_distance_to_route(
+                row["latitude"],
+                row["longitude"],
+                sampled_route_df
+            ),
+            axis=1
+        )
 
-            availability_weight = {
-                "Available": 100,
-                "Busy": 30,
-                "Unknown": 0,
-                "Offline": -200
-            }
+        near_route_df = route_map_df[
+            route_map_df["distance_to_route_km"] <= max_distance_from_route_km
+        ].copy()
 
-            route_map_df["availability_score"] = (
-                route_map_df["availability_status"].map(availability_weight)
-            )
+        if len(near_route_df) == 0:
+            st.warning("No chargers found within the selected route distance.")
+            st.stop()
 
-            route_map_df["amenity_score"] = (
-                route_map_df.apply(calculate_amenity_score, axis=1)
-            )
+        st.info(
+            f"Found {len(near_route_df)} chargers within {max_distance_from_route_km} km of the route."
+        )
 
-            route_map_df["amenity_label"] = (
-                route_map_df["amenity_score"].apply(amenity_label)
-            )
+        near_route_df["availability_status"] = near_route_df.apply(
+            simulated_availability,
+            axis=1
+        )
 
-            sampled_route = route_df.iloc[
-                ::max(1, len(route_df) // 100)
-            ].copy()
+        availability_weight = {
+            "Available": 100,
+            "Busy": 30,
+            "Unknown": 0,
+            "Offline": -200
+        }
 
-            def nearest_route_distance(row):
-                distances = sampled_route.apply(
-                    lambda point: haversine_distance(
-                        row["latitude"],
-                        row["longitude"],
-                        point["latitude"],
-                        point["longitude"]
+        near_route_df["availability_score"] = (
+            near_route_df["availability_status"].map(availability_weight)
+        )
+
+        near_route_df["amenity_score"] = near_route_df.apply(
+            amenity_score,
+            axis=1
+        )
+
+        near_route_df["amenity_label"] = (
+            near_route_df["amenity_score"].apply(amenity_label)
+        )
+
+        near_route_df["route_score"] = (
+            near_route_df["max_power_kw"].fillna(0) * 0.6
+            + near_route_df["reliability_score"].fillna(0) * 1.4
+        )
+
+        near_route_df["route_recommendation_score"] = (
+            near_route_df["route_score"].fillna(0)
+            + near_route_df["availability_score"].fillna(0)
+            + near_route_df["amenity_score"].fillna(0)
+            - near_route_df["distance_to_route_km"].fillna(0) * 10
+        )
+
+        recommended_stops = near_route_df.sort_values(
+            "route_recommendation_score",
+            ascending=False
+        ).head(10).copy()
+
+        # -----------------------------
+        # Corridor risk score
+        # -----------------------------
+
+        chargers_near_route = len(near_route_df)
+        chargers_per_100_km = chargers_near_route / max(distance_km / 100, 1)
+        avg_reliability = near_route_df["reliability_score"].fillna(0).mean()
+        avg_availability_score = near_route_df["availability_score"].fillna(0).mean()
+
+        coverage_risk = max(0, 100 - min(chargers_per_100_km * 4, 100))
+        reliability_risk = max(0, 100 - avg_reliability)
+        availability_risk = max(0, 100 - max(avg_availability_score, 0))
+
+        corridor_risk_score = (
+            coverage_risk * 0.35
+            + reliability_risk * 0.40
+            + availability_risk * 0.25
+        )
+
+        corridor_risk_score = round(
+            min(max(corridor_risk_score, 0), 100),
+            2
+        )
+
+        if corridor_risk_score >= 70:
+            corridor_risk_label = "High Risk"
+        elif corridor_risk_score >= 40:
+            corridor_risk_label = "Medium Risk"
+        else:
+            corridor_risk_label = "Lower Risk"
+
+        st.subheader("Corridor Risk Score")
+
+        st.markdown("""
+        The Corridor Risk Score estimates how risky an EV route is based on charging infrastructure along the selected route.
+
+        It considers:
+
+        - how many chargers are near the route
+        - average charger reliability
+        - estimated availability
+        - charger coverage along the route
+        - whether the route has enough nearby charging options
+
+        A higher score means the route may have higher charging risk, weaker infrastructure coverage, or lower charger trust.
+        """)
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        col1.metric("Corridor Risk", corridor_risk_label)
+        col2.metric("Risk Score", corridor_risk_score)
+        col3.metric("Chargers Near Route", chargers_near_route)
+        col4.metric("Chargers / 100 km", round(chargers_per_100_km, 1))
+
+        col5, col6 = st.columns(2)
+
+        col5.metric("Avg Reliability", round(avg_reliability, 1))
+        col6.metric("Avg Availability Score", round(avg_availability_score, 1))
+
+        st.caption(
+            "Interpretation: A route can have many chargers but still show medium or high corridor risk if reliability, data freshness, or estimated availability is weak."
+        )
+
+        st.caption(
+            "Corridor risk uses public charger data, reliability indicators and simulated availability. It is a planning estimate, not live operational risk."
+        )
+
+        # -----------------------------
+        # Recommended chargers table
+        # -----------------------------
+
+        st.subheader("Recommended Charging Stops Near Route")
+
+        st.caption(
+            "Availability status is currently simulated from reliability indicators and data freshness. Future versions can replace this with live operator API data."
+        )
+
+        st.dataframe(
+            recommended_stops[
+                [
+                    "station_name",
+                    "town",
+                    "state_clean",
+                    "max_power_kw",
+                    "reliability_score",
+                    "availability_status",
+                    "availability_score",
+                    "amenity_label",
+                    "amenity_score",
+                    "route_score",
+                    "route_recommendation_score",
+                    "distance_to_route_km"
+                ]
+            ],
+            use_container_width=True
+        )
+
+        # -----------------------------
+        # Charging stop sequence
+        # -----------------------------
+
+        st.subheader("Suggested Charging Stop Sequence")
+
+        usable_start_range_km = adjusted_range_km * (
+            starting_battery_percent / 100
+        )
+
+        safe_start_range_km = max(
+            usable_start_range_km - safety_buffer_km,
+            1
+        )
+
+        usable_after_charge_range_km = adjusted_range_km * (
+            (target_battery_percent - minimum_arrival_percent) / 100
+        )
+
+        safe_after_charge_range_km = max(
+            usable_after_charge_range_km - safety_buffer_km,
+            1
+        )
+
+        charging_sequence = []
+        used_station_names = set()
+        battery_warning_triggered = False
+
+        current_battery_percent = starting_battery_percent
+        previous_distance_km = 0
+        stop_number = 1
+
+        if distance_km <= safe_start_range_km:
+            charging_sequence = []
+
+        else:
+            target_distance = safe_start_range_km
+
+            while target_distance < distance_km:
+
+                candidate_stops = near_route_df.copy()
+
+                candidate_stops["distance_to_target_km"] = candidate_stops.apply(
+                    lambda row: min(
+                        abs(
+                            haversine_distance(
+                                row["latitude"],
+                                row["longitude"],
+                                route_df.iloc[
+                                    min(
+                                        int(
+                                            (target_distance / distance_km)
+                                            * (len(route_df) - 1)
+                                        ),
+                                        len(route_df) - 1
+                                    )
+                                ]["latitude"],
+                                route_df.iloc[
+                                    min(
+                                        int(
+                                            (target_distance / distance_km)
+                                            * (len(route_df) - 1)
+                                        ),
+                                        len(route_df) - 1
+                                    )
+                                ]["longitude"]
+                            )
+                        ),
+                        9999
                     ),
                     axis=1
                 )
 
-                return distances.min()
-
-            route_map_df["distance_to_route_km"] = route_map_df.apply(
-                nearest_route_distance,
-                axis=1
-            )
-
-            near_route_df = route_map_df[
-                route_map_df["distance_to_route_km"] <= route_buffer_km
-            ].copy()
-
-            near_route_df["route_recommendation_score"] = (
-                near_route_df["route_score"].fillna(0)
-                + near_route_df["availability_score"].fillna(0)
-                + (near_route_df["amenity_score"].fillna(0) * 0.5)
-                - (near_route_df["distance_to_route_km"] * 10)
-            )
-
-            recommended_stops = (
-                near_route_df
-                .sort_values("route_recommendation_score", ascending=False)
-                .head(30)
-            )
-
-            st.info(
-                f"Found {len(near_route_df)} chargers within "
-                f"{route_buffer_km} km of the route."
-            )
-
-            st.subheader("Corridor Risk Score")
-
-            st.markdown("""
-            The **Corridor Risk Score** estimates how risky an EV route is based on charging infrastructure along the selected route.
-
-            It considers:
-            - how many chargers are near the route
-            - average charger reliability
-            - estimated availability
-            - charger coverage along the route
-            - whether the route has enough nearby charging options
-
-            A higher score means the route may have higher charging risk, weaker infrastructure coverage, or lower charger trust.
-            """)
-
-            corridor_charger_count = len(near_route_df)
-
-            avg_corridor_reliability = (
-                near_route_df["reliability_score"]
-                .fillna(0)
-                .mean()
-            )
-
-            avg_corridor_availability = (
-                near_route_df["availability_score"]
-                .fillna(0)
-                .mean()
-            )
-
-            chargers_per_100km = (
-                corridor_charger_count / distance_km
-            ) * 100
-
-            corridor_risk_score = (
-                (100 - min(chargers_per_100km * 10, 100)) * 0.4
-                + (100 - avg_corridor_reliability) * 0.35
-                + (100 - max(avg_corridor_availability, 0)) * 0.25
-            )
-
-            corridor_risk_score = round(
-                max(0, min(corridor_risk_score, 100)),
-                2
-            )
-
-            if corridor_risk_score >= 70:
-                corridor_risk_label = "High Risk"
-            elif corridor_risk_score >= 40:
-                corridor_risk_label = "Medium Risk"
-            else:
-                corridor_risk_label = "Low Risk"
-
-            risk_col1, risk_col2, risk_col3, risk_col4 = st.columns(4)
-
-            risk_col1.metric(
-                "Corridor Risk",
-                corridor_risk_label
-            )
-
-            risk_col2.metric(
-                "Risk Score",
-                corridor_risk_score
-            )
-
-            risk_col3.metric(
-                "Chargers Near Route",
-                corridor_charger_count
-            )
-
-            risk_col4.metric(
-                "Chargers / 100 km",
-                round(chargers_per_100km, 1)
-            )
-
-            risk_col5, risk_col6 = st.columns(2)
-
-            risk_col5.metric(
-                "Avg Reliability",
-                round(avg_corridor_reliability, 1)
-            )
-
-            risk_col6.metric(
-                "Avg Availability Score",
-                round(avg_corridor_availability, 1)
-            )
-
-            st.caption(
-                "Interpretation: A route can have many chargers but still show medium or high corridor risk if reliability, data freshness, or estimated availability is weak."
-            )
-
-            st.caption(
-                "Corridor risk uses public charger data, reliability indicators and  simulated availability. It is a planning estimate, not live operational risk."
-            )
-
-            st.subheader("Recommended Charging Stops Near Route")
-
-            st.caption(
-                "Availability status is currently simulated from reliability indicators and  data freshness. Future versions can replace this with live operator API data."
-            )
-
-            if len(recommended_stops) == 0:
-                st.warning("No chargers found within the selected route buffer.")
-                st.stop()
-
-            st.dataframe(
-                recommended_stops[
-                    [
-                        "station_name",
-                        "town",
-                        "state_clean",
-                        "max_power_kw",
-                        "reliability_score",
-                        "availability_status",
-                        "availability_score",
-                        "amenity_label",
-                        "amenity_score",
-                        "route_score",
-                        "route_recommendation_score",
-                        "distance_to_route_km"
-                    ]
-                ],
-                use_container_width=True
-            )
-
-            st.subheader("Suggested Charging Stop Sequence")
-
-            usable_start_range_km = adjusted_ev_range_km * (
-                starting_battery_percent / 100
-            )
-
-            usable_after_charge_range_km = adjusted_ev_range_km * (
-                (dynamic_charge_to_percent - charge_from_percent) / 100
-            )
-
-            safe_start_range_km = max(
-                usable_start_range_km - safety_buffer_km,
-                1
-            )
-
-            safe_after_charge_range_km = max(
-                usable_after_charge_range_km - safety_buffer_km,
-                1
-            )
-
-            route_stop_targets = []
-
-            distance_covered = safe_start_range_km
-
-            while distance_covered < distance_km:
-                route_stop_targets.append(distance_covered)
-                distance_covered += safe_after_charge_range_km
-
-            sequence_stops = []
-            used_station_names = set()
-
-            current_battery_percent = starting_battery_percent
-            previous_distance_km = 0
-            battery_warning_triggered = False
-
-            for target_distance in route_stop_targets:
-
-                leg_distance_km = target_distance - previous_distance_km
-
-                battery_used_percent = (
-                    leg_distance_km / adjusted_ev_range_km
-                ) * 100
-
-                arrival_battery_percent = max(
-                    current_battery_percent - battery_used_percent,
-                    0
-                )
-
-                if arrival_battery_percent < charge_from_percent:
-                    battery_warning_triggered = True
-
-                charge_needed_percent = max(
-                    dynamic_charge_to_percent - arrival_battery_percent,
-                    0
-                )
-
-                energy_needed_kwh = (
-                    battery_kwh
-                    * charge_needed_percent
-                    / 100
-                )
-
-                target_ratio = target_distance / distance_km
-
-                target_index = int(
-                    target_ratio * len(route_df)
-                )
-
-                target_index = min(
-                    max(target_index, 0),
-                    len(route_df) - 1
-                )
-
-                target_point = route_df.iloc[target_index]
-
-                candidate_stops = recommended_stops.copy()
-
-                candidate_stops["distance_to_target_km"] = (
-                    candidate_stops.apply(
-                        lambda row: haversine_distance(
-                            row["latitude"],
-                            row["longitude"],
-                            target_point["latitude"],
-                            target_point["longitude"]
-                        ),
-                        axis=1
-                    )
-                )
-
                 candidate_stops = candidate_stops[
                     ~candidate_stops["station_name"].isin(used_station_names)
-                ]
+                ].copy()
 
                 if len(candidate_stops) == 0:
+                    battery_warning_triggered = True
                     break
 
                 best_stop = (
@@ -3941,16 +3937,39 @@ elif page == "Real Route Optimizer":
 
                 used_station_names.add(best_stop["station_name"])
 
-                charger_power_kw = max(
-                    float(best_stop["max_power_kw"])
-                    if pd.notna(best_stop["max_power_kw"])
-                    else 1,
-                    1
+                leg_distance_km = target_distance - previous_distance_km
+
+                battery_used_percent = (
+                    leg_distance_km / adjusted_range_km
+                ) * 100
+
+                arrival_battery_percent = max(
+                    current_battery_percent - battery_used_percent,
+                    0
+                )
+
+                if arrival_battery_percent < minimum_arrival_percent:
+                    battery_warning_triggered = True
+
+                charge_needed_percent = max(
+                    target_battery_percent - arrival_battery_percent,
+                    0
                 )
 
                 departure_battery_percent = min(
                     arrival_battery_percent + charge_needed_percent,
                     100
+                )
+
+                energy_needed_kwh = (
+                    battery_kwh * charge_needed_percent / 100
+                )
+
+                charger_power_kw = max(
+                    float(best_stop["max_power_kw"])
+                    if pd.notna(best_stop["max_power_kw"])
+                    else 1,
+                    1
                 )
 
                 effective_charger_power_kw = charger_power_kw
@@ -3973,132 +3992,139 @@ elif page == "Real Route Optimizer":
                     energy_needed_kwh * electricity_price_per_kwh
                 )
 
-                current_battery_percent = departure_battery_percent
-                previous_distance_km = target_distance
-
-                sequence_stops.append({
-                    "stop_number": len(sequence_stops) + 1,
+                charging_sequence.append({
+                    "stop_number": stop_number,
                     "target_distance_km": round(target_distance, 1),
                     "station_name": best_stop["station_name"],
-                    "town": best_stop["town"],
-                    "state_clean": best_stop["state_clean"],
-                    "max_power_kw": best_stop["max_power_kw"],
-                    "reliability_score": best_stop["reliability_score"],
-                    "availability_status": best_stop["availability_status"],
-                    "availability_score": best_stop["availability_score"],
-                    "amenity_label": best_stop["amenity_label"],
-                    "amenity_score": best_stop["amenity_score"],
-                    "route_score": best_stop["route_score"],
+                    "town": best_stop.get("town", ""),
+                    "state_clean": best_stop.get("state_clean", ""),
+                    "max_power_kw": best_stop.get("max_power_kw", 0),
+                    "reliability_score": best_stop.get("reliability_score", 0),
+                    "availability_status": best_stop.get("availability_status", "Unknown"),
+                    "availability_score": best_stop.get("availability_score", 0),
+                    "amenity_label": best_stop.get("amenity_label", "Basic Stop"),
+                    "amenity_score": best_stop.get("amenity_score", 0),
+                    "route_score": best_stop.get("route_score", 0),
                     "arrival_battery_%": round(arrival_battery_percent, 1),
                     "departure_battery_%": round(departure_battery_percent, 1),
                     "estimated_charge_kwh": round(energy_needed_kwh, 1),
                     "estimated_charge_time_min": round(estimated_charge_time_min, 1),
                     "estimated_charge_cost_aud": round(estimated_charge_cost_aud, 2),
-                    "distance_to_target_km": round(
-                        best_stop["distance_to_target_km"],
-                        1
-                    )
+                    "distance_to_target_km": round(best_stop["distance_to_target_km"], 1)
                 })
 
-          if battery_warning_triggered:
-                low_arrival_stops = [
-                    stop for stop in charging_sequence
-                    if stop.get("arrival_battery_%", 100) < minimum_arrival_percent
-                ]
+                current_battery_percent = departure_battery_percent
+                previous_distance_km = target_distance
+                target_distance += safe_after_charge_range_km
+                stop_number += 1
 
-                if len(low_arrival_stops) > 0:
-                    affected_stops = ", ".join(
-                        [
-                            f"Stop {int(stop.get('stop_number', 0))} "
-                            f"({stop.get('station_name', 'Unknown Station')}: "
-                            f"{round(stop.get('arrival_battery_%', 0), 1)}%)"
-                            for stop in low_arrival_stops
-                        ]
-                    )
+                if stop_number > 20:
+                    battery_warning_triggered = True
+                    break
 
-                    st.warning(
-                        f"Battery may fall below your selected minimum arrival battery of "
-                        f"{minimum_arrival_percent}% at: {affected_stops}. "
-                        f"Consider increasing starting battery, reducing the safety buffer, "
-                        f"choosing a longer-range EV, or switching to a more conservative charging strategy."
-                    )
-                else:
-                    st.warning(
-                        "Battery may drop below the selected minimum arrival battery on one or more legs. "
-                        "Consider increasing starting battery, using a longer-range EV, reducing the safety buffer, "
-                        "or choosing a different charging strategy."
-                    )
+        if battery_warning_triggered:
+            low_arrival_stops = [
+                stop for stop in charging_sequence
+                if stop.get("arrival_battery_%", 100) < minimum_arrival_percent
+            ]
 
-            if len(sequence_stops) == 0:
-
-                st.success(
-                    "No charging stop required based on selected EV range."
+            if len(low_arrival_stops) > 0:
+                affected_stops = ", ".join(
+                    [
+                        f"Stop {int(stop.get('stop_number', 0))} "
+                        f"({stop.get('station_name', 'Unknown Station')}: "
+                        f"{round(stop.get('arrival_battery_%', 0), 1)}%)"
+                        for stop in low_arrival_stops
+                    ]
                 )
 
-                total_charging_time_min = 0
-                total_trip_time_hours = duration_hours
-                total_charging_cost_aud = 0
-                cost_per_100km = 0
-
+                st.warning(
+                    f"Battery may fall below your selected minimum arrival battery of "
+                    f"{minimum_arrival_percent}% at: {affected_stops}. "
+                    f"Consider increasing starting battery, reducing the safety buffer, "
+                    f"choosing a longer-range EV, or switching to a more conservative charging strategy."
+                )
             else:
-
-                sequence_df = pd.DataFrame(sequence_stops)
-
-                total_charging_time_min = (
-                    sequence_df["estimated_charge_time_min"].sum()
+                st.warning(
+                    "Battery may drop below the selected minimum arrival battery on one or more legs. "
+                    "Consider increasing starting battery, using a longer-range EV, reducing the safety buffer, "
+                    "or choosing a different charging strategy."
                 )
 
-                total_trip_time_hours = (
-                    duration_hours + (total_charging_time_min / 60)
-                )
+        if len(charging_sequence) == 0:
+            st.success(
+                "No charging stop required based on selected EV range."
+            )
 
-                total_charging_cost_aud = (
-                    sequence_df["estimated_charge_cost_aud"].sum()
-                )
+            total_charging_time_min = 0
+            total_charging_cost_aud = 0
+            total_energy_added_kwh = 0
+            total_trip_time_hours = duration_hours
 
-                cost_per_100km = (
-                    total_charging_cost_aud / distance_km
-                ) * 100
+        else:
+            sequence_df = pd.DataFrame(charging_sequence)
 
-                summary_col1, summary_col2, summary_col3, summary_col4, summary_col5 = st.columns(5)
+            total_charging_time_min = sequence_df[
+                "estimated_charge_time_min"
+            ].sum()
 
-                summary_col1.metric(
-                    "Charging Stops",
-                    len(sequence_df)
-                )
+            total_charging_cost_aud = sequence_df[
+                "estimated_charge_cost_aud"
+            ].sum()
 
-                summary_col2.metric(
-                    "Total Charging Time",
-                    f"{round(total_charging_time_min, 1)} min"
-                )
+            total_energy_added_kwh = sequence_df[
+                "estimated_charge_kwh"
+            ].sum()
 
-                summary_col3.metric(
-                    "Total Trip Time",
-                    f"{round(total_trip_time_hours, 1)} hrs"
-                )
+            total_trip_time_hours = (
+                duration_hours + total_charging_time_min / 60
+            )
 
-                summary_col4.metric(
-                    "Charging Cost",
-                    f"${round(total_charging_cost_aud, 2)}"
-                )
+            cost_per_100_km = (
+                total_charging_cost_aud / distance_km
+            ) * 100
 
-                summary_col5.metric(
-                    "Cost / 100 km",
-                    f"${round(cost_per_100km, 2)}"
-                )
+            col1, col2, col3, col4, col5 = st.columns(5)
 
-                st.dataframe(
-                    sequence_df,
-                    use_container_width=True
-                )
+            col1.metric(
+                "Charging Stops",
+                len(sequence_df)
+            )
 
-                st.subheader("Why These Stops Were Recommended")
-                for _, stop in sequence_df.iterrows():
-                    st.markdown(
+            col2.metric(
+                "Total Charging Time",
+                f"{round(total_charging_time_min, 1)} min"
+            )
+
+            col3.metric(
+                "Total Trip Time",
+                f"{round(total_trip_time_hours, 1)} hrs"
+            )
+
+            col4.metric(
+                "Charging Cost",
+                f"${round(total_charging_cost_aud, 2)}"
+            )
+
+            col5.metric(
+                "Cost / 100 km",
+                f"${round(cost_per_100_km, 2)}"
+            )
+
+            st.dataframe(
+                sequence_df,
+                use_container_width=True
+            )
+
+            st.subheader("Why These Stops Were Recommended")
+
+            for _, stop in sequence_df.iterrows():
+                st.markdown(
                     f"""
                     **Stop {int(stop["stop_number"])}: {stop["station_name"]}**
 
                     Recommended because:
+
                     - Charger speed: **{stop["max_power_kw"]} kW**
                     - Availability estimate: **{stop["availability_status"]}**
                     - Amenity type: **{stop["amenity_label"]}**
@@ -4108,119 +4134,117 @@ elif page == "Real Route Optimizer":
                     - Estimated charging cost: **${stop["estimated_charge_cost_aud"]}**
                     - Detour from target point: **{stop["distance_to_target_km"]} km**
                     """
-                  )
-
-                csv_sequence = sequence_df.to_csv(index=False)
-
-                st.download_button(
-                    "Download Stop Sequence CSV",
-                    csv_sequence,
-                    file_name="chargesense_stop_sequence.csv",
-                    mime="text/csv"
                 )
 
-            st.subheader("Trip Plan Summary")
+            csv_sequence = sequence_df.to_csv(index=False)
 
-            if len(sequence_stops) > 0:
-                charging_stops_count = len(sequence_df)
-                charging_time_summary = round(total_charging_time_min, 1)
-                total_trip_time_summary = round(total_trip_time_hours, 1)
-                charging_cost_summary = round(total_charging_cost_aud, 2)
-                cost_per_100km_summary = round(cost_per_100km, 2)
-            else:
-                charging_stops_count = 0
-                charging_time_summary = 0
-                total_trip_time_summary = round(duration_hours, 1)
-                charging_cost_summary = 0
-                cost_per_100km_summary = 0
+            st.download_button(
+                "Download Stop Sequence CSV",
+                csv_sequence,
+                file_name="chargesense_stop_sequence.csv",
+                mime="text/csv"
+            )
 
-            trip_summary = f"""
+        # -----------------------------
+        # Trip summary
+        # -----------------------------
+
+        st.subheader("Trip Plan Summary")
+
+        if len(charging_sequence) == 0:
+            charging_stops_count = 0
+            cost_per_100_km = 0
+        else:
+            charging_stops_count = len(sequence_df)
+            cost_per_100_km = (
+                total_charging_cost_aud / distance_km
+            ) * 100
+
+        trip_summary = f"""
 Route: {start_label} → {destination_label}
 EV: {selected_ev}
 Distance: {round(distance_km, 1)} km
 Drive Time: {round(duration_hours, 1)} hrs
-Adjusted EV Range: {round(adjusted_ev_range_km, 1)} km
+Adjusted EV Range: {round(adjusted_range_km, 1)} km
 Weather: {weather_mode}
 Strategy: {charging_strategy}
 Charging Stops: {charging_stops_count}
-Total Charging Time: {charging_time_summary} min
-Estimated Charging Cost: ${charging_cost_summary}
-Estimated Cost per 100 km: ${cost_per_100km_summary}
-Estimated Total Trip Time: {total_trip_time_summary} hrs
+Total Charging Time: {round(total_charging_time_min, 1)} min
+Estimated Charging Cost: ${round(total_charging_cost_aud, 2)}
+Estimated Cost per 100 km: ${round(cost_per_100_km, 2)}
+Estimated Total Trip Time: {round(total_trip_time_hours, 1)} hrs
 Charging Price Used: ${electricity_price_per_kwh}/kWh
 Corridor Risk: {corridor_risk_label}
 Corridor Risk Score: {corridor_risk_score}
 """
 
-            st.code(trip_summary)
+        st.code(trip_summary)
 
-            st.download_button(
-                "Download Trip Plan",
-                trip_summary,
-                file_name="chargesense_trip_plan.txt"
+        st.download_button(
+            "Download Trip Plan",
+            trip_summary,
+            file_name="chargesense_trip_plan.txt"
+        )
+
+        # -----------------------------
+        # Map
+        # -----------------------------
+
+        st.subheader("Route Map with Recommended Chargers")
+
+        recommended_stops["plot_size"] = (
+            recommended_stops["max_power_kw"]
+            .fillna(1)
+            .clip(lower=5, upper=350)
+        )
+
+        fig = px.scatter_mapbox(
+            recommended_stops,
+            lat="latitude",
+            lon="longitude",
+            hover_name="station_name",
+            hover_data=[
+                "town",
+                "state_clean",
+                "max_power_kw",
+                "reliability_score",
+                "availability_status",
+                "amenity_label",
+                "route_recommendation_score",
+                "distance_to_route_km"
+            ],
+            size="plot_size",
+            color="route_recommendation_score",
+            zoom=6,
+            height=650
+        )
+
+        fig.add_scattermapbox(
+            lat=route_df["latitude"],
+            lon=route_df["longitude"],
+            mode="lines",
+            line=dict(
+                width=4,
+                color="blue"
+            ),
+            name="Driving Route"
+        )
+
+        fig.update_layout(
+            mapbox_style="open-street-map",
+            margin=dict(
+                l=0,
+                r=0,
+                t=0,
+                b=0
             )
+        )
 
-            st.subheader("Route Map with Recommended Chargers")
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
 
-            recommended_stops["plot_size"] = (
-                recommended_stops["max_power_kw"]
-                .fillna(1)
-                .clip(lower=5, upper=350)
-            )
-
-            fig = px.scatter_mapbox(
-                recommended_stops,
-                lat="latitude",
-                lon="longitude",
-                hover_name="station_name",
-                hover_data={
-                    "town": True,
-                    "state_clean": True,
-                    "max_power_kw": True,
-                    "reliability_score": True,
-                    "availability_status": True,
-                    "availability_score": True,
-                    "amenity_label": True,
-                    "amenity_score": True,
-                    "route_score": True,
-                    "route_recommendation_score": True,
-                    "distance_to_route_km": True,
-                    "latitude": False,
-                    "longitude": False,
-                    "plot_size": False
-                },
-                color="route_recommendation_score",
-                size="plot_size",
-                center={
-                    "lat": route_df["latitude"].mean(),
-                    "lon": route_df["longitude"].mean()
-                },
-                zoom=6,
-                height=700
-            )
-
-            fig.add_scattermapbox(
-                lat=route_df["latitude"],
-                lon=route_df["longitude"],
-                mode="lines",
-                line=dict(width=4),
-                name="Driving Route"
-            )
-
-            fig.update_layout(
-                mapbox_style="open-street-map",
-                margin={
-                    "r": 0,
-                    "t": 0,
-                    "l": 0,
-                    "b": 0
-                }
-            )
-
-            st.plotly_chart(
-                fig,
-                use_container_width=True
-            )
 
 # -----------------------------
 # PROJECT INSIGHTS
