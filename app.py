@@ -2279,9 +2279,9 @@ elif page == "Fleet & Council Intelligence":
 
     st.subheader("Executive Summary")
 
-    top_investment_state = b2b_df.sort_values(
-        "investment_priority_score",
-        ascending=False
+    top_demand_state = b2b_df.sort_values(
+    "demand_pressure_index",
+    ascending=False
     ).iloc[0]
 
     top_demand_state = b2b_df.sort_values(
