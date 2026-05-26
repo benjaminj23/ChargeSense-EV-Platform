@@ -3414,6 +3414,10 @@ elif page == "Real Route Optimizer":
         horizontal=True
     )
 
+    waypoint_inputs = []
+    waypoint_coords = []
+    waypoint_labels = []
+
     if route_input_mode == "Major City":
         cities = sorted(city_coordinates.keys())
 
@@ -3453,6 +3457,47 @@ elif page == "Real Route Optimizer":
                 "Destination",
                 "Wollongong NSW"
             )
+
+        if "route_stop_count" not in st.session_state:
+            st.session_state.route_stop_count = 1
+
+        add_route_stops = st.checkbox(
+            "Add route stops / waypoints",
+            value=False
+        )
+
+        if add_route_stops:
+            st.markdown("#### Route Stops")
+
+            st.caption(
+                "Add stops in the order you want the route to follow, similar to Google Maps waypoints."
+            )
+
+            for i in range(st.session_state.route_stop_count):
+                waypoint_value = st.text_input(
+                    f"Stop {i + 1}",
+                    "",
+                    key=f"route_waypoint_{i}"
+                )
+
+                waypoint_inputs.append(waypoint_value)
+
+            col_add, col_clear = st.columns(2)
+
+            with col_add:
+                if st.button("Add another stop"):
+                    st.session_state.route_stop_count += 1
+                    st.rerun()
+
+            with col_clear:
+                if st.button("Clear stops"):
+                    st.session_state.route_stop_count = 1
+
+                    for key in list(st.session_state.keys()):
+                        if key.startswith("route_waypoint_"):
+                            del st.session_state[key]
+
+                    st.rerun()
 
         start_coords = None
         end_coords = None
@@ -3546,6 +3591,9 @@ elif page == "Real Route Optimizer":
 
     if generate_route:
 
+        waypoint_coords = []
+        waypoint_labels = []
+
         if route_input_mode == "Custom Place":
             start_geo = geocode_place(start_place)
             destination_geo = geocode_place(destination_place)
@@ -3572,16 +3620,61 @@ elif page == "Real Route Optimizer":
             destination_label = destination_geo["display_name"]
 
             st.info(f"Start matched to: {start_label}")
+
+            cleaned_waypoints = [
+                waypoint.strip()
+                for waypoint in waypoint_inputs
+                if waypoint.strip() != ""
+            ]
+
+            for waypoint in cleaned_waypoints:
+                waypoint_geo = geocode_place(waypoint)
+
+                if waypoint_geo is None:
+                    st.warning(
+                        f"Could not find route stop: {waypoint}. This stop will be skipped."
+                    )
+                else:
+                    waypoint_coords.append(
+                        [
+                            waypoint_geo["longitude"],
+                            waypoint_geo["latitude"]
+                        ]
+                    )
+
+                    waypoint_labels.append(
+                        waypoint_geo["display_name"]
+                    )
+
+                    st.info(
+                        f"Route stop matched to: {waypoint_geo['display_name']}"
+                    )
+
             st.info(f"Destination matched to: {destination_label}")
 
         if start_coords == end_coords:
             st.warning("Start and destination cannot be the same.")
             st.stop()
 
+        route_points = [
+            start_coords
+        ]
+
+        if route_input_mode == "Custom Place" and len(waypoint_coords) > 0:
+            route_points.extend(waypoint_coords)
+
+        route_points.append(end_coords)
+
+        osrm_coordinate_string = ";".join(
+            [
+                f"{coords[0]},{coords[1]}"
+                for coords in route_points
+            ]
+        )
+
         url = (
             f"https://router.project-osrm.org/route/v1/driving/"
-            f"{start_coords[0]},{start_coords[1]};"
-            f"{end_coords[0]},{end_coords[1]}"
+            f"{osrm_coordinate_string}"
         )
 
         params = {
@@ -3626,9 +3719,16 @@ elif page == "Real Route Optimizer":
         weather_multiplier = weather_multipliers[weather_mode]
         adjusted_range_km = base_range_km * weather_multiplier
 
-        st.success(
-            f"Route generated from {start_label} to {destination_label}"
-        )
+        if route_input_mode == "Custom Place" and len(waypoint_labels) > 0:
+            waypoint_summary = " → ".join(waypoint_labels)
+
+            st.success(
+                f"Route generated from {start_label} → {waypoint_summary} → {destination_label}"
+            )
+        else:
+            st.success(
+                f"Route generated from {start_label} to {destination_label}"
+            )
 
         col1, col2, col3 = st.columns(3)
 
@@ -4151,6 +4251,7 @@ elif page == "Real Route Optimizer":
 
         trip_summary = f"""
 Route: {start_label} → {destination_label}
+Waypoints: {", ".join(waypoint_labels) if route_input_mode == "Custom Place" and len(waypoint_labels) > 0 else "None"}
 EV: {selected_ev}
 Distance: {round(distance_km, 1)} km
 Drive Time: {round(duration_hours, 1)} hrs
@@ -4234,6 +4335,7 @@ Corridor Risk Score: {corridor_risk_score}
             fig,
             use_container_width=True
         )
+
 
 elif page == "Data Reality & Production Needs":
 
