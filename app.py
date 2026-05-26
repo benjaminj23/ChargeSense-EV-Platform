@@ -1,7 +1,7 @@
 # ChargeSense EV Infrastructure Intelligence Platform
 # © 2026 Benjamin Joseph. All rights reserved.
 # This code is for portfolio and  demonstration purposes only.
-import rand om
+import random
 import math 
 import requests
 import numpy as np
