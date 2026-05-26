@@ -4001,11 +4001,32 @@ elif page == "Real Route Optimizer":
                 })
 
             if battery_warning_triggered:
-                st.warning(
-                    "Battery may drop below the selected minimum arrival battery on one or more legs. "
-                    "Consider increasing starting battery, using a longer-range EV, reducing the safety buffer, "
-                    "or choosing a different charging strategy."
-                )
+                low_arrival_stops = sequence_df[
+                    sequence_df["arrival_battery_%"] < minimum_arrival_percent
+                ].copy()
+
+                if len(low_arrival_stops) > 0:
+                    affected_stops = ", ".join(
+                        [
+                            f"Stop {int(row['stop_number'])} "
+                            f"({row['station_name']}: "
+                            f"{round(row['arrival_battery_%'], 1)}%)"
+                            for _, row in low_arrival_stops.iterrows()
+                        ]
+                    )
+
+                    st.warning(
+                        f"Battery may fall below your selected minimum arrival battery of "
+                        f"{minimum_arrival_percent}% at: {affected_stops}. "
+                        f"Consider increasing starting battery, reducing the safety buffer, "
+                        f"choosing a longer-range EV, or switching to a more conservative charging strategy."
+                    )
+                else:
+                    st.warning(
+                        "Battery may drop below the selected minimum arrival battery on one or more legs. "
+                        "Consider increasing starting battery, using a longer-range EV, reducing the safety buffer, "
+                        "or choosing a different charging strategy."
+                    )
 
             if len(sequence_stops) == 0:
 
