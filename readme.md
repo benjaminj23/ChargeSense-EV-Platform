@@ -126,11 +126,6 @@ The demand forecast model estimates future EV charging pressure using EV fleet g
 
 ---
 
-## Screenshots
-
-Add screenshots in an `images/` folder and update the paths below.
-
-
 Current limitations
 
 ChargeSense currently uses public and derived data, so some features are prototype estimates:
@@ -161,6 +156,15 @@ Fleet depot locations and route schedules
 Fleet vehicle telematics or usage patterns
 Grid capacity or site feasibility data for infrastructure planning
 
+
+---
+
+## Screenshots
+
+Add screenshots in an `images/` folder and update the paths below.
+
+
+C
 ```text
 images/home.png
 images/real-route-optimizer.png
