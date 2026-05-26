@@ -1,13 +1,13 @@
 # ChargeSense EV Infrastructure Intelligence Platform
 # © 2026 Benjamin Joseph. All rights reserved.
-# This code is for portfolio and demonstration purposes only.
-import random
+# This code is for portfolio and  demonstration purposes only.
+import rand om
 import math 
 import requests
 import numpy as np
 from datetime import datetime, timedelta
 
-import pandas as pd
+import pand as as pd
 import plotly.express as px
 import streamlit as st
 
@@ -118,7 +118,7 @@ ocm_df["reliability_label"] = ocm_df["reliability_score"].apply(reliability_labe
 state_population = {
     "New South Wales": 8500000,
     "Victoria": 6900000,
-    "Queensland": 5600000,
+    "Queensland ": 5600000,
     "Western Australia": 3000000,
     "South Australia": 1900000,
     "Tasmania": 575000,
@@ -247,7 +247,7 @@ else:
             "Infrastructure Overview",
             "Interactive Map",
             "Infrastructure Gap Analysis",
-            "Demand Forecast Model",
+            "Demand  Forecast Model",
             "Fleet & Council Intelligence",
             "Fleet Route Upload",
             "Operator Performance",
@@ -270,10 +270,10 @@ if page == "Home":
     st.subheader("EV Infrastructure Intelligence & Route Planning Platform")
 
     st.markdown("""
-    ChargeSense is a prototype platform for EV route planning and EV infrastructure intelligence in Australia.
+    ChargeSense is a prototype platform for EV route planning and  EV infrastructure intelligence in Australia.
 
-    It combines public charger data, EV registration-based signals, routing APIs, demand forecasting,
-    reliability scoring, corridor risk analysis, operator benchmarking andfleet/council planning analytics.
+    It combines public charger data, EV registration-based signals, routing APIs, demand  forecasting,
+    reliability scoring, corridor risk analysis, operator benchmarking and fleet/council planning analytics.
     """)
 
     st.markdown("### Two Product Modes")
@@ -298,9 +298,9 @@ if page == "Home":
         st.markdown("""
         #### 🏛️ Infrastructure Intelligence
 
-        Helps fleets, councils, planners andoperators analyse:
+        Helps fleets, councils, planners and operators analyse:
         - infrastructure gaps
-        - future charging demand
+        - future charging demand 
         - investment priority
         - operator performance
         - fleet route risk
@@ -320,7 +320,7 @@ if page == "Home":
     - Weather-adjusted EV range
     - Charging cost estimation
     - Corridor risk scoring
-    - Demand forecasting
+    - Demand  forecasting
     - Investment priority ranking
     - Operator performance benchmarking
     - Fleet route CSV upload
@@ -330,7 +330,7 @@ if page == "Home":
     st.markdown("---")
 
     st.caption(
-        "Built using Python, Streamlit, OpenChargeMap data, OSRM routing, Nominatim geocoding andEV registration-derived inputs."
+        "Built using Python, Streamlit, OpenChargeMap data, OSRM routing, Nominatim geocoding and EV registration-derived inputs."
     )
 
     st.link_button(
@@ -376,11 +376,11 @@ elif page == "Infrastructure Gap Analysis":
 
     st.markdown("""
     Identify states that may require stronger EV charging investment based on
-    charger density, EV adoption, ultra-fast charger availability and reliability.
+    charger density, EV adoption, ultra-fast charger availability and  reliability.
     """)
 
     st.caption(
-        "Investment priority combines chargers per 1,000 EVs, EV growth rate, charger reliability and ultra-fast charger coverage."
+        "Investment priority combines chargers per 1,000 EVs, EV growth rate, charger reliability and  ultra-fast charger coverage."
     )
 
     gap_view = (
@@ -442,7 +442,7 @@ elif page == "Infrastructure Gap Analysis":
         highest_investment_priority["state_clean"]
     )
 
-    st.subheader("Infrastructure Gap and Investment Ranking")
+    st.subheader("Infrastructure Gap and  Investment Ranking")
 
     st.dataframe(
         gap_view,
@@ -497,9 +497,9 @@ elif page == "Infrastructure Gap Analysis":
     ### How to interpret this
 
     **Infrastructure Gap Score** shows where charging infrastructure may be weak relative to population,
-    charger reliability and ultra-fast charger availability.
+    charger reliability and  ultra-fast charger availability.
 
-    **Chargers per 1,000 EVs** compares charging supply against actual EV registrations, making it more demand-aware
+    **Chargers per 1,000 EVs** compares charging supply against actual EV registrations, making it more demand -aware
     than population-only metrics.
 
     **Investment Priority Score** highlights where infrastructure investment may be most urgent by combining:
@@ -581,7 +581,7 @@ elif page == "Reliability Intelligence":
 
     st.markdown("""
     Reliability score is based on recent verification, data quality level,
-    and days since the charging station was last verified.
+    and  days since the charging station was last verified.
     """)
 
     reliability_view = (
@@ -614,7 +614,7 @@ elif page == "Charger Recommendation":
     st.title("🎯 Charger Recommendation Engine")
 
     st.markdown("""
-    Find recommended charging stations based on charger power and reliability score.
+    Find recommended charging stations based on charger power and  reliability score.
     """)
 
     col1, col2, col3 = st.columns(3)
@@ -680,7 +680,7 @@ elif page == "Reliability Risk Model":
 
     st.markdown("""
     This model estimates charger reliability risk using verification freshness,
-    data quality, charger power and connector availability.
+    data quality, charger power and  connector availability.
 
     This is a rule-based risk model, not a production-grade ML failure prediction model.
     """)
@@ -751,7 +751,7 @@ elif page == "Queue Simulation Engine":
 
     st.markdown("""
     Simulate estimated waiting time at EV charging stations based on charger capacity,
-    arrival demand and average charging duration.
+    arrival demand  and  average charging duration.
     """)
 
     queue_df = ocm_df.copy()
@@ -870,7 +870,7 @@ elif page == "Reservation Simulation":
     reservation_minutes = st.slider("Reservation Duration (minutes)", 15, 60, 20)
 
     def generate_access_code():
-        return str(random.randint(1000, 9999))
+        return str(rand om.rand int(1000, 9999))
 
     if st.button("Simulate Reservation"):
         booking_time = datetime.now()
@@ -890,7 +890,7 @@ elif page == "Reservation Simulation":
 
         - Access code is valid only during the reservation window.
         - If the driver does not arrive before expiry, the charger is released.
-        - Future versions could include no-show penalties and queue priority rules.
+        - Future versions could include no-show penalties and  queue priority rules.
         """)
 
 # -----------------------------
@@ -902,7 +902,7 @@ elif page == "Congestion Risk Analysis":
 
     st.markdown("""
     Estimate EV charging congestion risk using charger power,
-    reliability and infrastructure availability indicators.
+    reliability and  infrastructure availability indicators.
     """)
 
     congestion_df = ocm_df.copy()
@@ -968,7 +968,7 @@ elif page == "Dynamic Pricing Simulator":
 
     st.markdown("""
     Simulate how EV charging prices could change based on charger speed,
-    congestion risk and reliability.
+    congestion risk and  reliability.
     """)
 
     pricing_df = ocm_df.copy()
@@ -1029,7 +1029,7 @@ elif page == "Charging Cost Simulator":
     st.title("🔋 Charging Cost Simulator")
 
     st.markdown("""
-    Estimate charging session cost based on battery size, charging need and simulated electricity price.
+    Estimate charging session cost based on battery size, charging need and  simulated electricity price.
     """)
 
     col1, col2, col3 = st.columns(3)
@@ -1135,11 +1135,11 @@ elif page == "Fleet Route Upload":
     st.title("🚚 Fleet Route Upload")
 
     st.markdown("""
-    Upload a CSV of fleet routes and estimate EV charging requirements, route risk,
-    charging cost and charging time across multiple trips.
+    Upload a CSV of fleet routes and  estimate EV charging requirements, route risk,
+    charging cost and  charging time across multiple trips.
 
     This is a high-level fleet planning model, not a live route optimizer.
-    For exact route maps and charger sequencing, use the Real Route Optimizer.
+    For exact route maps and  charger sequencing, use the Real Route Optimizer.
     """)
 
     st.caption(
@@ -1674,7 +1674,7 @@ elif page == "Fleet Route Upload":
     - identifying routes that may need depot charging or schedule changes
 
     This page uses city-level route estimates. A future version could use exact depot addresses,
-    OSRM road routing, live charger availability, depot charging infrastructure and vehicle telematics.
+    OSRM road routing, live charger availability, depot charging infrastructure and  vehicle telematics.
     """)
 
 elif page == "Operator Performance Dashboard":
@@ -1683,9 +1683,9 @@ elif page == "Operator Performance Dashboard":
 
     st.markdown("""
     Benchmark charging operators based on network size, charger speed, ultra-fast coverage,
-    reliability indicators, availability estimates and amenity quality.
+    reliability indicators, availability estimates and  amenity quality.
 
-    This view helps identify which operators appear strongest from an infrastructure and user-experience perspective.
+    This view helps identify which operators appear strongest from an infrastructure and  user-experience perspective.
     """)
 
     st.caption(
@@ -1975,25 +1975,25 @@ elif page == "Model Assumptions":
     st.markdown("""
     ### Why this page matters
 
-    ChargeSense uses public EV infrastructure datasets and scenario-based models.
+    ChargeSense uses public EV infrastructure datasets and  scenario-based models.
     Some outputs are analytical estimates, not confirmed real-world measurements.
 
     ### Key Assumptions
 
     **1. Reliability Score**  
-    Based on recent verification, data quality and days since last verified.
+    Based on recent verification, data quality and  days since last verified.
 
     **2. Infrastructure Gap Score**  
-    Combines charger density, ultra-fast coverage and average reliability.
+    Combines charger density, ultra-fast coverage and  average reliability.
 
     **3. Congestion Risk Score**  
-    Uses charger power, reliability and state-level infrastructure availability as proxy inputs.
+    Uses charger power, reliability and  state-level infrastructure availability as proxy inputs.
 
-    **4. Demand Forecast Model**  
-    Uses estimated EV fleet growth, population share, public charging frequency and current station count.
+    **4. Demand  Forecast Model**  
+    Uses estimated EV fleet growth, population share, public charging frequency and  current station count.
 
     **5. Queue Simulation**  
-    Estimates wait time using arrivals per hour, connector count and average charging session duration.
+    Estimates wait time using arrivals per hour, connector count and  average charging session duration.
 
     **6. Route Intelligence**  
     Uses state-level route corridors, not exact road geometry. Full routing would require a routing API.
@@ -2011,8 +2011,8 @@ elif page == "Model Assumptions":
     - Add real charger utilization data
     - Add routing API integration
     - Add operator-level uptime data
-    - Add suburb/LGA-level population and EV registration data
-    - Train models on historical failure and usage records
+    - Add suburb/LGA-level population and  EV registration data
+    - Train models on historical failure and  usage records
     """)
 
 
@@ -2021,14 +2021,14 @@ elif page == "Fleet & Council Intelligence":
     st.title("🏛️ Fleet & Council Intelligence")
 
     st.markdown("""
-    Strategic EV infrastructure intelligence for councils, fleet managers and infrastructure planners.
+    Strategic EV infrastructure intelligence for councils, fleet managers and  infrastructure planners.
 
-    This page combines EV adoption, charger supply, reliability, demand pressure and operator benchmarking
-    to support investment and planning decisions.
+    This page combines EV adoption, charger supply, reliability, demand  pressure and  operator benchmarking
+    to support investment and  planning decisions.
     """)
 
     st.caption(
-        "This dashboard uses public charger metadata, AAA/BITRE EV registration-derived inputs and scenario-based planning assumptions. It is a decision-support prototype, not an official infrastructure forecast."
+        "This dashboard uses public charger metadata, AAA/BITRE EV registration-derived inputs and  scenario-based planning assumptions. It is a decision-support prototype, not an official infrastructure forecast."
     )
 
     # -----------------------------------
@@ -2067,7 +2067,7 @@ elif page == "Fleet & Council Intelligence":
     )
 
     # -----------------------------------
-    # DEMAND FORECAST ASSUMPTIONS
+    # DEMand  FORECAST ASSUMPTIONS
     # -----------------------------------
 
     st.subheader("Planning Assumptions")
@@ -2145,16 +2145,16 @@ elif page == "Fleet & Council Intelligence":
     max_sessions_pressure = b2b_df["sessions_per_station_month"].max()
 
     if pd.isna(max_sessions_pressure) or max_sessions_pressure == 0:
-        b2b_df["demand_pressure_index"] = 0
+        b2b_df["demand _pressure_index"] = 0
     else:
-        b2b_df["demand_pressure_index"] = (
+        b2b_df["demand _pressure_index"] = (
             b2b_df["sessions_per_station_month"]
             / max_sessions_pressure
             * 100
         )
 
-    b2b_df["demand_pressure_index"] = (
-        b2b_df["demand_pressure_index"]
+    b2b_df["demand _pressure_index"] = (
+        b2b_df["demand _pressure_index"]
         .fillna(0)
         .round(2)
     )
@@ -2284,8 +2284,8 @@ elif page == "Fleet & Council Intelligence":
         ascending=False
     ).iloc[0]
 
-    top_demand_state = b2b_df.sort_values(
-        "demand_pressure_index",
+    top_demand _state = b2b_df.sort_values(
+        "demand _pressure_index",
         ascending=False
     ).iloc[0]
 
@@ -2304,8 +2304,8 @@ elif page == "Fleet & Council Intelligence":
     )
 
     col2.metric(
-        "Highest Demand Pressure",
-        top_demand_state["state_clean"]
+        "Highest Demand  Pressure",
+        top_demand _state["state_clean"]
     )
 
     col3.metric(
@@ -2346,8 +2346,8 @@ elif page == "Fleet & Council Intelligence":
         ascending=False
     ).head(3)
 
-    demand_states = b2b_df.sort_values(
-        "demand_pressure_index",
+    demand _states = b2b_df.sort_values(
+        "demand _pressure_index",
         ascending=False
     ).head(3)
 
@@ -2360,7 +2360,7 @@ elif page == "Fleet & Council Intelligence":
         f"""
         **Investment focus:** Prioritise **{top_investment_state["state_clean"]}** based on the combined investment priority score.
 
-        **Demand pressure:** **{top_demand_state["state_clean"]}** shows the highest forecast charging pressure under the current assumptions.
+        **Demand  pressure:** **{top_demand _state["state_clean"]}** shows the highest forecast charging pressure under the current assumptions.
 
         **Charger supply gap:** **{weakest_charger_supply_state["state_clean"]}** has the lowest chargers per 1,000 EVs, suggesting tighter charging supply relative to EV adoption.
 
@@ -2388,7 +2388,7 @@ elif page == "Fleet & Council Intelligence":
                 "investment_priority_score",
                 "investment_priority_label",
                 "additional_stations_needed",
-                "demand_pressure_index"
+                "demand _pressure_index"
             ]
         ]
         .sort_values("investment_priority_score", ascending=False)
@@ -2410,10 +2410,10 @@ elif page == "Fleet & Council Intelligence":
     )
 
     # -----------------------------------
-    # DEMAND FORECAST SUMMARY
+    # DEMand  FORECAST SUMMARY
     # -----------------------------------
 
-    st.subheader("Demand Forecast Summary")
+    st.subheader("Demand  Forecast Summary")
 
     forecast_summary = (
         b2b_df[
@@ -2425,10 +2425,10 @@ elif page == "Fleet & Council Intelligence":
                 "sessions_per_station_month",
                 "required_stations",
                 "additional_stations_needed",
-                "demand_pressure_index"
+                "demand _pressure_index"
             ]
         ]
-        .sort_values("demand_pressure_index", ascending=False)
+        .sort_values("demand _pressure_index", ascending=False)
         .round(2)
     )
 
@@ -2440,9 +2440,9 @@ elif page == "Fleet & Council Intelligence":
     csv_forecast = forecast_summary.to_csv(index=False)
 
     st.download_button(
-        "Download Demand Forecast Report CSV",
+        "Download Demand  Forecast Report CSV",
         csv_forecast,
-        file_name="chargesense_demand_forecast_report.csv",
+        file_name="chargesense_demand _forecast_report.csv",
         mime="text/csv"
     )
 
@@ -2509,15 +2509,15 @@ elif page == "Fleet & Council Intelligence":
         additional_station_chart.set_index("state_clean")["additional_stations_needed"]
     )
 
-    st.subheader("Demand Pressure Index by State")
+    st.subheader("Demand  Pressure Index by State")
 
-    demand_chart = b2b_df.sort_values(
-        "demand_pressure_index",
+    demand _chart = b2b_df.sort_values(
+        "demand _pressure_index",
         ascending=False
     )
 
     st.bar_chart(
-        demand_chart.set_index("state_clean")["demand_pressure_index"]
+        demand _chart.set_index("state_clean")["demand _pressure_index"]
     )
 
     st.subheader("Operator Performance Score")
@@ -2538,13 +2538,13 @@ elif page == "Fleet & Council Intelligence":
     st.markdown("""
     ### How to interpret this page
 
-    **Fleet managers** can use this page to understand charging risk, expected charging demand and operator network strength.
+    **Fleet managers** can use this page to understand  charging risk, expected charging demand  and  operator network strength.
 
     **Councils** can use this page to identify states or regions where public charging infrastructure may need stronger investment.
 
-    **Charging investors/operators** can use this page to compare demand pressure, infrastructure gaps and operator performance.
+    **Charging investors/operators** can use this page to compare demand  pressure, infrastructure gaps and  operator performance.
 
-    The current model is state-level. A future B2B version could extend this to LGA, suburb, corridor, or depot-level planning using richer geographic and fleet data.
+    The current model is state-level. A future B2B version could extend this to LGA, suburb, corridor, or depot-level planning using richer geographic and  fleet data.
     """)
 
     st.caption(
@@ -2556,10 +2556,10 @@ elif page == "Route Comparison Mode":
     st.title("🧭 Route Comparison Mode")
 
     st.markdown("""
-    Compare different EV trip scenarios across weather conditions and charging strategies.
+    Compare different EV trip scenarios across weather conditions and  charging strategies.
 
     This page provides a high-level planning comparison, not a full charger-by-charger route optimizer.
-    Use it to understand how vehicle choice, weather, strategy and charging price affect total trip planning.
+    Use it to understand  how vehicle choice, weather, strategy and  charging price affect total trip planning.
     """)
 
     city_coordinates = {
@@ -2643,7 +2643,7 @@ elif page == "Route Comparison Mode":
         )
 
     if start_city == destination_city:
-        st.warning("Start city and destination city cannot be the same.")
+        st.warning("Start city and  destination city cannot be the same.")
         st.stop()
 
     start_coords = city_coordinates[start_city]
@@ -2661,7 +2661,7 @@ elif page == "Route Comparison Mode":
     estimated_drive_time_hours = estimated_route_distance_km / 85
 
     st.caption(
-        "This comparison mode estimates route distance using city coordinates and a road-distance adjustment. "
+        "This comparison mode estimates route distance using city coordinates and  a road-distance adjustment. "
         "Use Real Route Optimizer for exact OSRM road routing."
     )
 
@@ -2884,30 +2884,30 @@ elif page == "Route Comparison Mode":
     st.markdown("""
     ### How to interpret this
 
-    **Route Comparison Mode** estimates how different weather and charging strategies affect a trip.
+    **Route Comparison Mode** estimates how different weather and  charging strategies affect a trip.
 
     - **Normal weather** preserves the vehicle's nominal range.
-    - **Cold weather, heavy rain and extreme heat** reduce estimated usable range.
-    - **Fastest Trip** assumes shorter charging sessions and higher effective charging power.
+    - **Cold weather, heavy rain and  extreme heat** reduce estimated usable range.
+    - **Fastest Trip** assumes shorter charging sessions and  higher effective charging power.
     - **Conservative** assumes a safer battery target.
     - **Fewest Stops** assumes higher charging targets, which may reduce stop count but increase charging time.
 
     This is a scenario comparison tool, not a replacement for the full Real Route Optimizer.
     """)
 
-elif page == "Demand Forecast Model":
+elif page == "Demand  Forecast Model":
 
-    st.title("📊 Demand Forecast Model")
+    st.title("📊 Demand  Forecast Model")
 
     st.markdown("""
     Forecast future EV charging pressure using estimated EV fleet growth, charging frequency assumptions,
-    and current charging infrastructure.
+    and  current charging infrastructure.
 
-    This is a **scenario-based demand model**, not a production-grade time-series model.
+    This is a **scenario-based demand  model**, not a production-grade time-series model.
     """)
 
     st.caption(
-        "The forecast uses estimated EV counts, state-level EV growth rates, public charging behaviour assumptions and current charger infrastructure."
+        "The forecast uses estimated EV counts, state-level EV growth rates, public charging behaviour assumptions and  current charger infrastructure."
     )
 
     forecast_df = state_metrics.copy()
@@ -2981,7 +2981,7 @@ elif page == "Demand Forecast Model":
     )
 
     st.caption(
-        "Public charging frequency and charger capacity are adjustable assumptions because actual charging behaviour varies by vehicle type, location, charger speed and home charging access."
+        "Public charging frequency and  charger capacity are adjustable assumptions because actual charging behaviour varies by vehicle type, location, charger speed and  home charging access."
     )
 
     forecast_df["state_ev_share"] = (
@@ -3034,33 +3034,33 @@ elif page == "Demand Forecast Model":
     max_pressure = forecast_df["sessions_per_station_month"].max()
 
     if max_pressure == 0 or pd.isna(max_pressure):
-        forecast_df["demand_pressure_index"] = 0
+        forecast_df["demand _pressure_index"] = 0
     else:
-        forecast_df["demand_pressure_index"] = (
+        forecast_df["demand _pressure_index"] = (
             forecast_df["sessions_per_station_month"]
             / max_pressure
         ) * 100
 
-    forecast_df["demand_pressure_index"] = (
-        forecast_df["demand_pressure_index"]
+    forecast_df["demand _pressure_index"] = (
+        forecast_df["demand _pressure_index"]
         .fillna(0)
         .round(2)
     )
 
-    def demand_pressure_label(score):
+    def demand _pressure_label(score):
         if score >= 70:
             return "High Future Pressure"
         elif score >= 40:
             return "Moderate Future Pressure"
         return "Lower Future Pressure"
 
-    forecast_df["demand_pressure_label"] = (
-        forecast_df["demand_pressure_index"]
-        .apply(demand_pressure_label)
+    forecast_df["demand _pressure_label"] = (
+        forecast_df["demand _pressure_index"]
+        .apply(demand _pressure_label)
     )
 
     forecast_df = forecast_df.sort_values(
-        "demand_pressure_index",
+        "demand _pressure_index",
         ascending=False
     )
 
@@ -3084,7 +3084,7 @@ elif page == "Demand Forecast Model":
 
     col3.metric(
         "Highest Pressure Index",
-        round(highest_pressure_state["demand_pressure_index"], 1)
+        round(highest_pressure_state["demand _pressure_index"], 1)
     )
 
     col4, col5 = st.columns(2)
@@ -3099,7 +3099,7 @@ elif page == "Demand Forecast Model":
         f"{forecast_horizon} years"
     )
 
-    st.subheader("Forecast Demand Pressure by State")
+    st.subheader("Forecast Demand  Pressure by State")
 
     st.dataframe(
         forecast_df[
@@ -3114,22 +3114,22 @@ elif page == "Demand Forecast Model":
                 "sessions_per_station_month",
                 "required_stations",
                 "additional_stations_needed",
-                "demand_pressure_index",
-                "demand_pressure_label"
+                "demand _pressure_index",
+                "demand _pressure_label"
             ]
         ].round(2),
         use_container_width=True
     )
 
-    st.subheader("Demand Pressure Index")
+    st.subheader("Demand  Pressure Index")
 
     pressure_chart = forecast_df.sort_values(
-        "demand_pressure_index",
+        "demand _pressure_index",
         ascending=False
     )
 
     st.bar_chart(
-        pressure_chart.set_index("state_clean")["demand_pressure_index"]
+        pressure_chart.set_index("state_clean")["demand _pressure_index"]
     )
 
     st.subheader("Forecast EV Fleet by State")
@@ -3157,19 +3157,19 @@ elif page == "Demand Forecast Model":
     st.markdown("""
     ### How to interpret this
 
-    **Forecast EVs** estimates future EV fleet size using current estimated EV counts and annual growth assumptions.
+    **Forecast EVs** estimates future EV fleet size using current estimated EV counts and  annual growth assumptions.
 
-    **Monthly Public Sessions** estimates public charging demand based on the assumed number of public charging sessions per EV per month.
+    **Monthly Public Sessions** estimates public charging demand  based on the assumed number of public charging sessions per EV per month.
 
     **Sessions per Station per Month** estimates pressure on existing charging infrastructure.
 
-    **Demand Pressure Index** scales the highest-pressure state to 100 and compares other states against it.
+    **Demand  Pressure Index** scales the highest-pressure state to 100 and  compares other states against it.
 
-    **Additional Stations Needed** estimates how many more charging stations may be needed to meet the assumed monthly charging demand capacity.
+    **Additional Stations Needed** estimates how many more charging stations may be needed to meet the assumed monthly charging demand  capacity.
     """)
 
     st.caption(
-        "Limitations: This model does not include charger plug count, charger uptime, home charging availability, traffic flows, charger speed mix, or live utilisation. It is intended for scenario planning and portfolio demonstration."
+        "Limitations: This model does not include charger plug count, charger uptime, home charging availability, traffic flows, charger speed mix, or live utilisation. It is intended for scenario planning and  portfolio demonstration."
     )
 
 
@@ -3178,7 +3178,7 @@ elif page == "Real Route Optimizer":
     st.title("🛰️ Real Route Optimizer")
 
     st.markdown("""
-    Generate a real driving route and identify high-quality EV charging stations near the route.
+    Generate a real driving route and  identify high-quality EV charging stations near the route.
 
     Use **Major City Mode** for quick routes, or **Custom Place Mode** for suburb/place-level routing.
     """)
@@ -3509,13 +3509,13 @@ elif page == "Real Route Optimizer":
         if route_input_mode == "Major City":
 
             if start_label == destination_label:
-                st.warning("Start city and destination city cannot be the same.")
+                st.warning("Start city and  destination city cannot be the same.")
                 st.stop()
 
         else:
 
             if start_place.strip() == "" or destination_place.strip() == "":
-                st.warning("Please enter both a start location and destination.")
+                st.warning("Please enter both a start location and  destination.")
                 st.stop()
 
             with st.spinner("Finding locations..."):
@@ -3798,13 +3798,13 @@ elif page == "Real Route Optimizer":
             )
 
             st.caption(
-                "Corridor risk uses public charger data, reliability indicators and simulated availability. It is a planning estimate, not live operational risk."
+                "Corridor risk uses public charger data, reliability indicators and  simulated availability. It is a planning estimate, not live operational risk."
             )
 
             st.subheader("Recommended Charging Stops Near Route")
 
             st.caption(
-                "Availability status is currently simulated from reliability indicators and data freshness. Future versions can replace this with live operator API data."
+                "Availability status is currently simulated from reliability indicators and  data freshness. Future versions can replace this with live operator API data."
             )
 
             if len(recommended_stops) == 0:
@@ -3906,10 +3906,10 @@ elif page == "Real Route Optimizer":
 
                 target_point = route_df.iloc[target_index]
 
-                candidate_stops = recommended_stops.copy()
+                cand idate_stops = recommended_stops.copy()
 
-                candidate_stops["distance_to_target_km"] = (
-                    candidate_stops.apply(
+                cand idate_stops["distance_to_target_km"] = (
+                    cand idate_stops.apply(
                         lambda row: haversine_distance(
                             row["latitude"],
                             row["longitude"],
@@ -3920,15 +3920,15 @@ elif page == "Real Route Optimizer":
                     )
                 )
 
-                candidate_stops = candidate_stops[
-                    ~candidate_stops["station_name"].isin(used_station_names)
+                cand idate_stops = cand idate_stops[
+                    ~cand idate_stops["station_name"].isin(used_station_names)
                 ]
 
-                if len(candidate_stops) == 0:
+                if len(cand idate_stops) == 0:
                     break
 
                 best_stop = (
-                    candidate_stops
+                    cand idate_stops
                     .sort_values(
                         [
                             "distance_to_target_km",
@@ -4211,27 +4211,27 @@ elif page == "Project Insights":
     ### Key Takeaways
 
     **1. Charger availability is not just about count.**  
-    Ultra-fast charger coverage matters more for long-distance travel and queue reduction.
+    Ultra-fast charger coverage matters more for long-distance travel and  queue reduction.
 
     **2. Reliability is a major product opportunity.**  
     A charger may exist in the dataset, but stale verification data reduces user trust.
 
     **3. Reservation systems can reduce queue uncertainty.**  
-    Short booking windows with temporary access codes could help manage high-demand charging sites.
+    Short booking windows with temporary access codes could help manage high-demand  charging sites.
 
     **4. Public EV datasets need cleaning.**  
-    Inconsistent state and location metadata show why infrastructure data products need strong data quality checks.
+    Inconsistent state and  location metadata show why infrastructure data products need strong data quality checks.
 
     **5. Charging type mix reveals infrastructure maturity.**  
-    Regions with more ultra-fast DC chargers are better positioned for long-distance EV adoption and queue reduction.
+    Regions with more ultra-fast DC chargers are better positioned for long-distance EV adoption and  queue reduction.
 
     **6. Scenario forecasting helps evaluate future pressure.**  
     Growth simulations can highlight which states may need stronger infrastructure investment as EV adoption rises.
 
     **7. Charger trust is a product opportunity.**  
-    Combining reliability, freshness, power and connector availability can help drivers choose better stations.
+    Combining reliability, freshness, power and  connector availability can help drivers choose better stations.
 
     **8. ChargeSense can evolve into a decision-support tool.**  
     Future versions could support charger investment planning, congestion forecasting,
-    live availability and smart route recommendations.
+    live availability and  smart route recommendations.
     """)
