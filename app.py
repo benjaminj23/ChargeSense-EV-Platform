@@ -3369,6 +3369,79 @@ elif page == "Real Route Optimizer":
 
         return round(max(base_wait, 0), 1)
 
+    def get_user_station_feedback(station_name):
+        empty_feedback = {
+            "user_review_count": 0,
+            "avg_user_rating": None,
+            "avg_reported_wait_time": None,
+            "user_success_rate": None,
+            "user_trust_score": None
+        }
+
+        if "station_reviews" not in st.session_state:
+            return empty_feedback
+
+        if len(st.session_state.station_reviews) == 0:
+            return empty_feedback
+
+        reviews_df = pd.DataFrame(st.session_state.station_reviews)
+
+        station_reviews = reviews_df[
+            reviews_df["station_name"].astype(str).str.lower()
+            == str(station_name).lower()
+        ].copy()
+
+        if len(station_reviews) == 0:
+            return empty_feedback
+
+        avg_rating = station_reviews["user_rating"].mean()
+        avg_wait_time = station_reviews["reported_wait_time_min"].mean()
+
+        success_rate = (
+            station_reviews["charger_worked"]
+            .map(
+                {
+                    "Yes": 1,
+                    "Partially": 0.5,
+                    "No": 0
+                }
+            )
+            .mean()
+            * 100
+        )
+
+        recommend_rate = (
+            station_reviews["would_recommend"]
+            .map(
+                {
+                    "Yes": 1,
+                    "Not sure": 0.5,
+                    "No": 0
+                }
+            )
+            .mean()
+            * 100
+        )
+
+        user_trust_score = (
+            avg_rating / 5 * 40
+            + success_rate * 0.45
+            + recommend_rate * 0.15
+        )
+
+        user_trust_score = round(
+            min(max(user_trust_score, 0), 100),
+            2
+        )
+
+        return {
+            "user_review_count": len(station_reviews),
+            "avg_user_rating": round(avg_rating, 2),
+            "avg_reported_wait_time": round(avg_wait_time, 1),
+            "user_success_rate": round(success_rate, 1),
+            "user_trust_score": user_trust_score
+        }
+
     def haversine_distance(lat1, lon1, lat2, lon2):
         radius_km = 6371
 
@@ -3937,6 +4010,27 @@ elif page == "Real Route Optimizer":
             ascending=False
         ).head(10).copy()
 
+        feedback_metrics = recommended_stops["station_name"].apply(
+            get_user_station_feedback
+        )
+
+        feedback_df = pd.DataFrame(list(feedback_metrics))
+
+        recommended_stops = recommended_stops.reset_index(drop=True)
+        feedback_df = feedback_df.reset_index(drop=True)
+
+        recommended_stops = pd.concat(
+            [
+                recommended_stops,
+                feedback_df
+            ],
+            axis=1
+        )
+
+        recommended_stops["user_feedback_label"] = recommended_stops["user_review_count"].apply(
+            lambda x: "User feedback available" if x > 0 else "No session feedback"
+        )
+
         # -----------------------------
         # Corridor risk score
         # -----------------------------
@@ -4001,7 +4095,7 @@ elif page == "Real Route Optimizer":
         )
 
         st.caption(
-            "Corridor risk uses public charger data, reliability indicators and simulated availability. It is a planning estimate, not live operational risk."
+            "Corridor risk uses public charger data, reliability indicators, simulated availability, and route coverage. It is a planning estimate, not live operational risk."
         )
 
         # -----------------------------
@@ -4011,7 +4105,7 @@ elif page == "Real Route Optimizer":
         st.subheader("Recommended Charging Stops Near Route")
 
         st.caption(
-            "Availability status, wait time, and queue pressure are estimated from public metadata and scenario assumptions. Future versions can replace this with live operator API or OCPI data."
+            "Availability status, wait time, and queue pressure are estimated from public metadata and scenario assumptions. User review fields are session-based only in this prototype."
         )
 
         recommended_stops["estimated_wait_time_min"] = recommended_stops.apply(
@@ -4033,6 +4127,12 @@ elif page == "Real Route Optimizer":
                     "reliability_score",
                     "availability_status",
                     "estimated_wait_time_min",
+                    "user_review_count",
+                    "avg_user_rating",
+                    "avg_reported_wait_time",
+                    "user_success_rate",
+                    "user_trust_score",
+                    "user_feedback_label",
                     "availability_score",
                     "amenity_label",
                     "amenity_score",
@@ -4191,6 +4291,10 @@ elif page == "Real Route Optimizer":
                     energy_needed_kwh * electricity_price_per_kwh
                 )
 
+                feedback_info = get_user_station_feedback(
+                    best_stop["station_name"]
+                )
+
                 charging_sequence.append({
                     "stop_number": stop_number,
                     "target_distance_km": round(target_distance, 1),
@@ -4211,7 +4315,12 @@ elif page == "Real Route Optimizer":
                     "estimated_charge_time_min": round(estimated_charge_time_min, 1),
                     "total_stop_time_min": round(total_stop_time_min, 1),
                     "estimated_charge_cost_aud": round(estimated_charge_cost_aud, 2),
-                    "distance_to_target_km": round(best_stop["distance_to_target_km"], 1)
+                    "distance_to_target_km": round(best_stop["distance_to_target_km"], 1),
+                    "user_review_count": feedback_info["user_review_count"],
+                    "avg_user_rating": feedback_info["avg_user_rating"],
+                    "avg_reported_wait_time": feedback_info["avg_reported_wait_time"],
+                    "user_success_rate": feedback_info["user_success_rate"],
+                    "user_trust_score": feedback_info["user_trust_score"]
                 })
 
                 current_battery_percent = departure_battery_percent
@@ -4346,6 +4455,16 @@ elif page == "Real Route Optimizer":
             st.subheader("Why These Stops Were Recommended")
 
             for _, stop in sequence_df.iterrows():
+
+                if pd.notna(stop.get("user_trust_score", None)):
+                    user_feedback_text = (
+                        f"- User feedback: **{int(stop['user_review_count'])} review(s)**, "
+                        f"average rating **{stop['avg_user_rating']}/5**, "
+                        f"user trust score **{stop['user_trust_score']}/100**"
+                    )
+                else:
+                    user_feedback_text = "- User feedback: **No session feedback available yet**"
+
                 st.markdown(
                     f"""
                     **Stop {int(stop["stop_number"])}: {stop["station_name"]}**
@@ -4357,6 +4476,7 @@ elif page == "Real Route Optimizer":
                     - Estimated wait before charging: **{stop["estimated_wait_time_min"]} minutes**
                     - Estimated charging time: **{stop["estimated_charge_time_min"]} minutes**
                     - Total estimated stop time: **{stop["total_stop_time_min"]} minutes**
+                    {user_feedback_text}
                     - Amenity type: **{stop["amenity_label"]}**
                     - Expected arrival battery: **{stop["arrival_battery_%"]}%**
                     - Expected departure battery: **{stop["departure_battery_%"]}%**
@@ -4441,6 +4561,9 @@ Corridor Risk Score: {corridor_risk_score}
                 "reliability_score",
                 "availability_status",
                 "estimated_wait_time_min",
+                "user_review_count",
+                "avg_user_rating",
+                "user_trust_score",
                 "amenity_label",
                 "route_recommendation_score",
                 "distance_to_route_km"
@@ -4476,6 +4599,8 @@ Corridor Risk Score: {corridor_risk_score}
             fig,
             use_container_width=True
         )
+
+
 
 elif page == "Data Reality & Production Needs":
 
