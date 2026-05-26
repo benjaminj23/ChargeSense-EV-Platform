@@ -3462,8 +3462,8 @@ elif page == "Real Route Optimizer":
             st.session_state.route_stop_count = 1
 
         add_route_stops = st.checkbox(
-            "Add route stops / waypoints",
-            value=False
+            "Add route stops / waypoints", 
+            value=False 
         )
 
         if add_route_stops:
