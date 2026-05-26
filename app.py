@@ -4244,8 +4244,12 @@ elif page == "Data Reality & Production Needs":
     routing APIs, derived metrics, and scenario-based assumptions.
 
     This page explains what is currently based on real public data, what is estimated,
-    and what additional data would be required to make the platform production-grade.
+    and what additional data would be required to make the platform more production-ready.
     """)
+
+    # -----------------------------------
+    # CURRENT DATA USED
+    # -----------------------------------
 
     st.subheader("Current Data Used")
 
@@ -4272,14 +4276,14 @@ elif page == "Data Reality & Production Needs":
             {
                 "Data Area": "EV registrations / market signals",
                 "Current Source": "AAA / BITRE-derived inputs",
-                "Current Status": "Public/derived data",
-                "Limitations": "Currently state-level, not full suburb/LGA detail"
+                "Current Status": "Public / derived data",
+                "Limitations": "Currently state-level, not full suburb or LGA detail"
             },
             {
                 "Data Area": "Vehicle range and battery specs",
                 "Current Source": "Hard-coded EV profile assumptions",
                 "Current Status": "Prototype assumptions",
-                "Limitations": "Should be replaced with maintained vehicle database"
+                "Limitations": "Should be replaced with a maintained vehicle database"
             },
             {
                 "Data Area": "Weather impact",
@@ -4289,7 +4293,7 @@ elif page == "Data Reality & Production Needs":
             },
             {
                 "Data Area": "Availability",
-                "Current Source": "Reliability/data freshness proxy",
+                "Current Source": "Reliability / data freshness proxy",
                 "Current Status": "Simulated",
                 "Limitations": "Not live charger occupancy"
             },
@@ -4303,7 +4307,7 @@ elif page == "Data Reality & Production Needs":
                 "Data Area": "Charging price",
                 "Current Source": "User-selected price assumption",
                 "Current Status": "Scenario estimate",
-                "Limitations": "Not station/operator-specific live pricing"
+                "Limitations": "Not station-specific or operator-specific live pricing"
             }
         ]
     )
@@ -4313,75 +4317,72 @@ elif page == "Data Reality & Production Needs":
         use_container_width=True
     )
 
-    st.subheader("What Data Would Be Needed for a Production Version")
+    st.caption(
+        "This table separates real public data from prototype assumptions and estimated features."
+    )
+
+    # -----------------------------------
+    # PRODUCTION DATA NEEDED
+    # -----------------------------------
+
+    st.subheader("Additional Data Needed for a More Production-Ready Version")
 
     production_data = pd.DataFrame(
         [
             {
-                "Need": "Live charger availability",
+                "Data Needed": "Live charger availability",
                 "Why It Matters": "Shows whether chargers are available, occupied, offline, or faulty in real time",
-                "Likely Source": "Charging operators / OCPI feeds / roaming platforms",
-                "Access Difficulty": "High"
+                "Possible Source": "Charging operators, OCPI feeds, roaming platforms"
             },
             {
-                "Need": "Station-level pricing",
+                "Data Needed": "Station-level pricing",
                 "Why It Matters": "Allows exact route cost instead of estimated cost",
-                "Likely Source": "Operators / OCPI tariff feeds",
-                "Access Difficulty": "High"
+                "Possible Source": "Charging operators, OCPI tariff feeds"
             },
             {
-                "Need": "Uptime and outage history",
+                "Data Needed": "Uptime and outage history",
                 "Why It Matters": "Improves reliability scoring and corridor risk accuracy",
-                "Likely Source": "Charging operators / maintenance records",
-                "Access Difficulty": "High"
+                "Possible Source": "Charging operators, maintenance records"
             },
             {
-                "Need": "Delivered charging power",
+                "Data Needed": "Delivered charging power",
                 "Why It Matters": "Improves charging time estimates beyond advertised max kW",
-                "Likely Source": "Charging sessions / operator telemetry",
-                "Access Difficulty": "High"
+                "Possible Source": "Charging sessions, operator telemetry"
             },
             {
-                "Need": "Vehicle charging curves",
+                "Data Needed": "Vehicle charging curves",
                 "Why It Matters": "Improves charging time estimates by vehicle and battery percentage",
-                "Likely Source": "EV databases / manufacturer data / testing datasets",
-                "Access Difficulty": "Medium"
+                "Possible Source": "EV databases, manufacturer data, testing datasets"
             },
             {
-                "Need": "Live weather and traffic",
+                "Data Needed": "Live weather and traffic",
                 "Why It Matters": "Improves range, travel time, and route risk estimates",
-                "Likely Source": "Weather APIs / Google Maps / HERE / TomTom",
-                "Access Difficulty": "Medium"
+                "Possible Source": "Weather APIs, Google Maps, HERE, TomTom"
             },
             {
-                "Need": "POI and amenities near chargers",
+                "Data Needed": "POI and amenities near chargers",
                 "Why It Matters": "Confirms toilets, food, cafes, parking, safety, and opening hours",
-                "Likely Source": "Google Places / OpenStreetMap POI data",
-                "Access Difficulty": "Medium"
+                "Possible Source": "Google Places, OpenStreetMap POI data"
             },
             {
-                "Need": "EV registrations by LGA/postcode",
+                "Data Needed": "EV registrations by LGA/postcode",
                 "Why It Matters": "Supports local infrastructure planning and site selection",
-                "Likely Source": "Government registration datasets / NEVDIS-derived sources",
-                "Access Difficulty": "Medium to High"
+                "Possible Source": "Government registration datasets, NEVDIS-derived sources"
             },
             {
-                "Need": "Traffic volume and corridor demand",
+                "Data Needed": "Traffic volume and corridor demand",
                 "Why It Matters": "Supports charger placement and investment prioritisation",
-                "Likely Source": "TfNSW traffic counts / transport datasets",
-                "Access Difficulty": "Medium"
+                "Possible Source": "TfNSW traffic counts, transport datasets"
             },
             {
-                "Need": "Grid capacity and site feasibility",
+                "Data Needed": "Grid capacity and site feasibility",
                 "Why It Matters": "Determines whether chargers can actually be installed at candidate sites",
-                "Likely Source": "DNSPs, councils, grid operators",
-                "Access Difficulty": "Very High"
+                "Possible Source": "DNSPs, councils, grid operators"
             },
             {
-                "Need": "Fleet depot and route data",
+                "Data Needed": "Fleet depot and route data",
                 "Why It Matters": "Enables real fleet electrification planning",
-                "Likely Source": "Fleet customers",
-                "Access Difficulty": "Customer-provided"
+                "Possible Source": "Fleet customers"
             }
         ]
     )
@@ -4390,6 +4391,14 @@ elif page == "Data Reality & Production Needs":
         production_data,
         use_container_width=True
     )
+
+    st.caption(
+        "This table identifies the next data layers that could improve commercial accuracy, validation, and customer value."
+    )
+
+    # -----------------------------------
+    # PROTOTYPE VS PRODUCTION READINESS
+    # -----------------------------------
 
     st.subheader("Prototype vs Production Readiness")
 
@@ -4429,6 +4438,11 @@ elif page == "Data Reality & Production Needs":
                 "Feature": "Availability Layer",
                 "Prototype Status": "Simulated",
                 "Production Gap": "Needs live operator APIs or OCPI integration"
+            },
+            {
+                "Feature": "Investment Priority Ranking",
+                "Prototype Status": "State-level planning estimate",
+                "Production Gap": "Needs local EV registrations, traffic demand, land-use data, and grid feasibility"
             }
         ]
     )
@@ -4437,6 +4451,10 @@ elif page == "Data Reality & Production Needs":
         readiness_data,
         use_container_width=True
     )
+
+    # -----------------------------------
+    # KEY VALIDATION QUESTION
+    # -----------------------------------
 
     st.subheader("Key Validation Question")
 
@@ -4450,9 +4468,16 @@ elif page == "Data Reality & Production Needs":
     This page separates the current prototype from a production-grade platform.
 
     It shows that ChargeSense already demonstrates the workflow using public data and assumptions,
-    while also identifying the exact data partnerships and integrations required for commercial accuracy.
+    while also identifying the specific data partnerships and integrations that could improve commercial accuracy.
+
+    For mentorship and customer discovery, this helps frame the next question:
+
+    **Which missing data layer is essential for validation, and which can wait until later?**
     """)
 
+    st.caption(
+        "ChargeSense is currently a prototype. The goal is to test the workflow, customer problem, and data value before attempting production-level integrations."
+    )
 
 
 # -----------------------------
