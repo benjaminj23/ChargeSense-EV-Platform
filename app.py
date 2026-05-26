@@ -2360,7 +2360,7 @@ elif page == "Fleet & Council Intelligence":
         f"""
         **Investment focus:** Prioritise **{top_investment_state["state_clean"]}** based on the combined investment priority score.
 
-        **Demand  pressure:** **{top_demand _state["state_clean"]}** shows the highest forecast charging pressure under the current assumptions.
+        **Demand  pressure:** **{top_demand_state["state_clean"]}** shows the highest forecast charging pressure under the current assumptions.
 
         **Charger supply gap:** **{weakest_charger_supply_state["state_clean"]}** has the lowest chargers per 1,000 EVs, suggesting tighter charging supply relative to EV adoption.
 
