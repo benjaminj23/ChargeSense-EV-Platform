@@ -7,7 +7,7 @@ import requests
 import numpy as np
 from datetime import datetime, timedelta
 
-import pand as as pd
+import pandas as pd
 import plotly.express as px
 import streamlit as st
 
