@@ -2284,62 +2284,53 @@ elif page == "Fleet & Council Intelligence":
 
     st.title("🏛️ Fleet & Council Intelligence")
 
-    st.markdown("""
-    Strategic EV infrastructure intelligence for councils, fleet managers and  infrastructure planners.
+    st.markdown(
+        "Strategic EV infrastructure intelligence for councils, fleet managers and infrastructure planners."
+    )
 
-    This page combines EV adoption, charger supply, reliability, demand  pressure and  operator benchmarking
-    to support investment and  planning decisions.
-    """)
+    st.markdown(
+        "This page combines EV adoption, charger supply, reliability, demand pressure and operator benchmarking to support investment and planning decisions."
+    )
 
     st.caption(
-        "This dashboard uses public charger metadata, AAA/BITRE EV registration-derived inputs and  scenario-based planning assumptions. It is a decision-support prototype, not an official infrastructure forecast."
+        "This dashboard uses public charger metadata, AAA/BITRE EV registration-derived inputs and scenario-based planning assumptions. "
+        "It is a decision-support prototype, not an official infrastructure forecast."
     )
 
-    # -----------------------------------
-    # PREPARE B2B STATE DATA
-    # -----------------------------------
+    # -----------------------------
+    # Prepare data
+    # -----------------------------
 
-    b2b_df = state_metrics.copy()
+    b2b_df = ocm_df.copy()
 
-    numeric_cols = [
-        "population",
-        "estimated_ev_count",
-        "annual_ev_growth_rate",
-        "total_stations",
-        "chargers_per_million",
-        "chargers_per_1000_evs",
-        "ultra_fast_sites",
-        "ultra_fast_ratio",
-        "avg_reliability",
-        "infrastructure_gap_score",
-        "investment_priority_score"
-    ]
+    b2b_df["state_clean"] = b2b_df["state_clean"].fillna("Unknown")
+    b2b_df["station_name"] = b2b_df["station_name"].fillna("Unknown Station")
 
-    for col in numeric_cols:
-        if col in b2b_df.columns:
-            b2b_df[col] = pd.to_numeric(
-                b2b_df[col],
-                errors="coerce"
-            )
+    if "operator" not in b2b_df.columns:
+        b2b_df["operator"] = "Unknown Operator"
 
-    b2b_df = b2b_df.dropna(
-        subset=[
-            "state_clean",
-            "estimated_ev_count",
-            "total_stations"
-        ]
-    )
+    b2b_df["operator"] = b2b_df["operator"].fillna("Unknown Operator")
 
-    # -----------------------------------
-    # DEMand  FORECAST ASSUMPTIONS
-    # -----------------------------------
+    b2b_df["max_power_kw"] = pd.to_numeric(
+        b2b_df["max_power_kw"],
+        errors="coerce"
+    ).fillna(0)
+
+    b2b_df["reliability_score"] = pd.to_numeric(
+        b2b_df["reliability_score"],
+        errors="coerce"
+    ).fillna(0)
+
+    # -----------------------------
+    # Planning assumptions
+    # -----------------------------
 
     st.subheader("Planning Assumptions")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        forecast_horizon = st.slider(
+        forecast_horizon_years = st.slider(
             "Forecast Horizon (Years)",
             1,
             10,
@@ -2347,7 +2338,7 @@ elif page == "Fleet & Council Intelligence":
         )
 
     with col2:
-        public_charges_per_ev_month = st.slider(
+        public_charges_per_ev_per_month = st.slider(
             "Public Charges per EV per Month",
             1,
             10,
@@ -2355,464 +2346,468 @@ elif page == "Fleet & Council Intelligence":
         )
 
     with col3:
-        charger_capacity_sessions_month = st.slider(
+        sessions_per_charger_per_month = st.slider(
             "Sessions per Charger per Month",
             100,
             2000,
             800,
-            step=50
+            50
         )
 
-    # -----------------------------------
-    # FORECAST PRESSURE
-    # -----------------------------------
-
-    b2b_df["state_growth_rate_used"] = (
-        b2b_df["annual_ev_growth_rate"]
-        .fillna(0)
-        .clip(lower=0, upper=100)
+    st.caption(
+        "These assumptions are adjustable because this page is designed for scenario testing rather than official forecasting."
     )
 
-    b2b_df["forecast_evs"] = (
-        b2b_df["estimated_ev_count"]
-        * (
-            1 + b2b_df["state_growth_rate_used"] / 100
-        ) ** forecast_horizon
-    )
+    # -----------------------------
+    # State-level aggregation
+    # -----------------------------
 
-    b2b_df["monthly_public_sessions"] = (
-        b2b_df["forecast_evs"]
-        * public_charges_per_ev_month
-    )
-
-    b2b_df["sessions_per_station_month"] = (
-        b2b_df["monthly_public_sessions"]
-        / b2b_df["total_stations"].replace(0, np.nan)
-    )
-
-    b2b_df["required_stations"] = (
-        b2b_df["monthly_public_sessions"]
-        / charger_capacity_sessions_month
-    )
-
-    b2b_df["additional_stations_needed"] = (
-        b2b_df["required_stations"]
-        - b2b_df["total_stations"]
-    )
-
-    b2b_df["additional_stations_needed"] = (
-        b2b_df["additional_stations_needed"]
-        .clip(lower=0)
-        .fillna(0)
-    )
-
-    max_sessions_pressure = b2b_df["sessions_per_station_month"].max()
-
-    if pd.isna(max_sessions_pressure) or max_sessions_pressure == 0:
-        b2b_df["demand_pressure_index"] = 0
-    else:
-        b2b_df["demand_pressure_index"] = (
-            b2b_df["sessions_per_station_month"]
-            / max_sessions_pressure
-            * 100
-        )
-
-    b2b_df["demand_pressure_index"] = (
-        b2b_df["demand_pressure_index"]
-        .fillna(0)
-        .round(2)
-    )
-
-    def b2b_priority_label(score):
-        high_threshold = b2b_df["investment_priority_score"].quantile(0.67)
-        medium_threshold = b2b_df["investment_priority_score"].quantile(0.33)
-
-        if score >= high_threshold:
-            return "High Priority"
-        elif score >= medium_threshold:
-            return "Medium Priority"
-        return "Lower Priority"
-
-    b2b_df["investment_priority_label"] = (
-        b2b_df["investment_priority_score"]
-        .apply(b2b_priority_label)
-    )
-
-    # -----------------------------------
-    # OPERATOR SUMMARY
-    # -----------------------------------
-
-    operator_df = ocm_df.copy()
-
-    operator_df["max_power_kw"] = pd.to_numeric(
-        operator_df["max_power_kw"],
-        errors="coerce"
-    )
-
-    operator_df["reliability_score"] = pd.to_numeric(
-        operator_df["reliability_score"],
-        errors="coerce"
-    )
-
-    def identify_operator(station_name):
-        name = str(station_name).lower()
-
-        if "tesla" in name:
-            return "Tesla"
-        elif "chargefox" in name:
-            return "Chargefox"
-        elif "evie" in name:
-            return "Evie"
-        elif "nrma" in name:
-            return "NRMA"
-        elif "ampol" in name:
-            return "Ampol"
-        elif "shell" in name:
-            return "Shell Recharge"
-        elif "bp" in name:
-            return "BP Pulse"
-        elif "jolt" in name:
-            return "JOLT"
-        elif "chargepoint" in name:
-            return "ChargePoint"
-        elif "racv" in name:
-            return "RACV"
-        elif "woolworths" in name:
-            return "Woolworths"
-        elif "7-eleven" in name or "7 eleven" in name:
-            return "7-Eleven"
-        else:
-            return "Other / Unknown"
-
-    operator_df["operator"] = operator_df["station_name"].apply(
-        identify_operator
-    )
-
-    operator_df["is_ultra_fast"] = (
-        operator_df["max_power_kw"].fillna(0) >= 250
-    )
-
-    operator_summary = (
-        operator_df
-        .groupby("operator")
+    state_summary = (
+        b2b_df
+        .groupby("state_clean")
         .agg(
             station_count=("station_name", "count"),
             avg_power_kw=("max_power_kw", "mean"),
-            max_power_kw=("max_power_kw", "max"),
             avg_reliability=("reliability_score", "mean"),
-            ultra_fast_sites=("is_ultra_fast", "sum")
+            ultra_fast_count=("max_power_kw", lambda x: (x >= 150).sum()),
+            high_power_count=("max_power_kw", lambda x: (x >= 50).sum())
         )
         .reset_index()
     )
 
-    operator_summary["ultra_fast_share"] = (
-        operator_summary["ultra_fast_sites"]
-        / operator_summary["station_count"]
+    state_summary = state_summary[
+        state_summary["state_clean"] != "Unknown"
+    ].copy()
+
+    # -----------------------------
+    # EV market assumptions
+    # -----------------------------
+    # Replace these later with more granular real EV registrations by state/LGA/postcode if available.
+
+    ev_market_estimates = {
+        "New South Wales": 95000,
+        "Victoria": 82000,
+        "Queensland": 68000,
+        "Western Australia": 32000,
+        "South Australia": 21000,
+        "Australian Capital Territory": 14000,
+        "Tasmania": 8000,
+        "Northern Territory": 2500,
+        "NSW": 95000,
+        "VIC": 82000,
+        "QLD": 68000,
+        "WA": 32000,
+        "SA": 21000,
+        "ACT": 14000,
+        "TAS": 8000,
+        "NT": 2500
+    }
+
+    state_summary["estimated_evs"] = state_summary["state_clean"].map(
+        ev_market_estimates
+    ).fillna(10000)
+
+    state_summary["chargers_per_1000_evs"] = (
+        state_summary["station_count"]
+        / state_summary["estimated_evs"]
+        * 1000
     )
 
-    operator_summary["operator_performance_score"] = (
-        operator_summary["station_count"].rank(pct=True) * 30
-        + operator_summary["avg_power_kw"].fillna(0).rank(pct=True) * 30
-        + operator_summary["avg_reliability"].fillna(0).rank(pct=True) * 20
-        + operator_summary["ultra_fast_share"].fillna(0).rank(pct=True) * 20
+    state_summary["ultra_fast_share_%"] = (
+        state_summary["ultra_fast_count"]
+        / state_summary["station_count"].replace(0, 1)
+        * 100
     )
 
-    operator_summary["operator_performance_score"] = (
-        operator_summary["operator_performance_score"]
+    state_summary["estimated_future_evs"] = (
+        state_summary["estimated_evs"]
+        * ((1.25) ** forecast_horizon_years)
+    ).round(0)
+
+    state_summary["monthly_public_sessions_needed"] = (
+        state_summary["estimated_future_evs"]
+        * public_charges_per_ev_per_month
+    )
+
+    state_summary["estimated_monthly_capacity"] = (
+        state_summary["station_count"]
+        * sessions_per_charger_per_month
+    )
+
+    state_summary["demand_pressure_ratio"] = (
+        state_summary["monthly_public_sessions_needed"]
+        / state_summary["estimated_monthly_capacity"].replace(0, 1)
+    )
+
+    state_summary["additional_chargers_needed"] = (
+        (
+            state_summary["monthly_public_sessions_needed"]
+            - state_summary["estimated_monthly_capacity"]
+        )
+        / sessions_per_charger_per_month
+    ).clip(lower=0).round(0)
+
+    # -----------------------------
+    # Investment priority score
+    # -----------------------------
+
+    state_summary["supply_gap_score"] = (
+        100 - state_summary["chargers_per_1000_evs"].clip(upper=100)
+    )
+
+    state_summary["demand_pressure_score"] = (
+        state_summary["demand_pressure_ratio"].clip(upper=5)
+        / 5
+        * 100
+    )
+
+    state_summary["reliability_gap_score"] = (
+        100 - state_summary["avg_reliability"].clip(upper=100)
+    )
+
+    state_summary["ultra_fast_gap_score"] = (
+        100 - state_summary["ultra_fast_share_%"].clip(upper=100)
+    )
+
+    state_summary["investment_priority_score"] = (
+        state_summary["supply_gap_score"] * 0.35
+        + state_summary["demand_pressure_score"] * 0.30
+        + state_summary["reliability_gap_score"] * 0.20
+        + state_summary["ultra_fast_gap_score"] * 0.15
+    )
+
+    state_summary["investment_priority_score"] = (
+        state_summary["investment_priority_score"]
         .clip(lower=0, upper=100)
         .round(2)
     )
 
-    operator_summary = operator_summary.sort_values(
-        "operator_performance_score",
-        ascending=False
+    # -----------------------------
+    # Safe top-state definitions
+    # -----------------------------
+
+    if len(state_summary) == 0:
+        st.error("No valid state-level data available for fleet and council analysis.")
+        st.stop()
+
+    top_investment_state = (
+        state_summary
+        .sort_values("investment_priority_score", ascending=False)
+        .iloc[0]
     )
 
-    known_operator_summary = operator_summary[
-        operator_summary["operator"] != "Other / Unknown"
-    ].copy()
+    top_demand_state = (
+        state_summary
+        .sort_values("demand_pressure_ratio", ascending=False)
+        .iloc[0]
+    )
 
-    if len(known_operator_summary) > 0:
-        best_operator = known_operator_summary.iloc[0]
-    else:
-        best_operator = operator_summary.iloc[0]
+    best_reliability_state = (
+        state_summary
+        .sort_values("avg_reliability", ascending=False)
+        .iloc[0]
+    )
 
-    # -----------------------------------
-    # EXECUTIVE SUMMARY KPIS
-    # -----------------------------------
+    weakest_supply_state = (
+        state_summary
+        .sort_values("chargers_per_1000_evs", ascending=True)
+        .iloc[0]
+    )
+
+    # -----------------------------
+    # Executive summary
+    # -----------------------------
 
     st.subheader("Executive Summary")
-
-    top_demand_state = b2b_df.sort_values(
-    "demand_pressure_index",
-    ascending=False
-    ).iloc[0]
-
-    top_demand_state = b2b_df.sort_values(
-        "demand_pressure_index",
-        ascending=False
-    ).iloc[0]
-
-    weakest_charger_supply_state = b2b_df.sort_values(
-        "chargers_per_1000_evs",
-        ascending=True
-    ).iloc[0]
-
-    total_additional_stations = b2b_df["additional_stations_needed"].sum()
 
     col1, col2, col3, col4 = st.columns(4)
 
     col1.metric(
-        "Top Investment Priority",
-        top_investment_state["state_clean"]
+        "Highest Investment Priority",
+        top_investment_state["state_clean"],
+        f"Score {top_investment_state['investment_priority_score']}"
     )
 
     col2.metric(
-        "Highest Demand  Pressure",
-        top_demand_state["state_clean"]
+        "Highest Demand Pressure",
+        top_demand_state["state_clean"],
+        f"{round(top_demand_state['demand_pressure_ratio'], 2)}x"
     )
 
     col3.metric(
-        "Lowest Chargers / 1,000 EVs",
-        weakest_charger_supply_state["state_clean"]
+        "Best Avg Reliability",
+        best_reliability_state["state_clean"],
+        f"{round(best_reliability_state['avg_reliability'], 1)}"
     )
 
     col4.metric(
-        "Best Known Operator",
-        best_operator["operator"]
+        "Weakest Charger Supply",
+        weakest_supply_state["state_clean"],
+        f"{round(weakest_supply_state['chargers_per_1000_evs'], 2)} / 1k EVs"
     )
 
-    col5, col6, col7 = st.columns(3)
-
-    col5.metric(
-        "Estimated Additional Stations Needed",
-        f"{int(round(total_additional_stations, 0)):,}"
+    st.info(
+        f"{top_investment_state['state_clean']} currently ranks as the highest investment-priority state in this prototype, "
+        f"based on charger supply, estimated EV demand growth, reliability and ultra-fast charger coverage."
     )
 
-    col6.metric(
-        "National Forecast EVs",
-        f"{int(round(b2b_df['forecast_evs'].sum(), 0)):,}"
+    # -----------------------------
+    # State planning table
+    # -----------------------------
+
+    st.subheader("State-Level Fleet & Council Planning Table")
+
+    display_state_summary = state_summary[
+        [
+            "state_clean",
+            "station_count",
+            "estimated_evs",
+            "estimated_future_evs",
+            "chargers_per_1000_evs",
+            "avg_power_kw",
+            "avg_reliability",
+            "ultra_fast_count",
+            "ultra_fast_share_%",
+            "monthly_public_sessions_needed",
+            "estimated_monthly_capacity",
+            "demand_pressure_ratio",
+            "additional_chargers_needed",
+            "investment_priority_score"
+        ]
+    ].copy()
+
+    st.dataframe(
+        display_state_summary
+        .sort_values("investment_priority_score", ascending=False)
+        .round(2),
+        use_container_width=True
     )
 
-    col7.metric(
-        "Planning Horizon",
-        f"{forecast_horizon} years"
+    # -----------------------------
+    # Visualisations
+    # -----------------------------
+
+    st.subheader("Investment Priority by State")
+
+    fig_priority = px.bar(
+        state_summary.sort_values("investment_priority_score", ascending=False),
+        x="state_clean",
+        y="investment_priority_score",
+        hover_data=[
+            "station_count",
+            "estimated_evs",
+            "chargers_per_1000_evs",
+            "demand_pressure_ratio",
+            "avg_reliability",
+            "ultra_fast_share_%"
+        ],
+        title="EV Charging Infrastructure Investment Priority Score"
     )
 
-    # -----------------------------------
-    # DECISION RECOMMENDATIONS
-    # -----------------------------------
+    st.plotly_chart(
+        fig_priority,
+        use_container_width=True
+    )
 
-    st.subheader("Planning Recommendations")
+    st.subheader("Demand Pressure vs Charger Supply")
 
-    priority_states = b2b_df.sort_values(
-        "investment_priority_score",
-        ascending=False
-    ).head(3)
+    fig_pressure = px.scatter(
+        state_summary,
+        x="chargers_per_1000_evs",
+        y="demand_pressure_ratio",
+        size="station_count",
+        color="investment_priority_score",
+        hover_name="state_clean",
+        hover_data=[
+            "estimated_evs",
+            "estimated_future_evs",
+            "additional_chargers_needed",
+            "avg_reliability",
+            "ultra_fast_share_%"
+        ],
+        title="Demand Pressure Compared with Charger Supply"
+    )
 
-    demand_states = b2b_df.sort_values(
-        "demand_pressure_index",
-        ascending=False
-    ).head(3)
+    st.plotly_chart(
+        fig_pressure,
+        use_container_width=True
+    )
 
-    low_supply_states = b2b_df.sort_values(
-        "chargers_per_1000_evs",
-        ascending=True
-    ).head(3)
+    st.subheader("Reliability and Ultra-Fast Coverage")
+
+    fig_reliability = px.scatter(
+        state_summary,
+        x="avg_reliability",
+        y="ultra_fast_share_%",
+        size="station_count",
+        color="state_clean",
+        hover_name="state_clean",
+        title="Reliability vs Ultra-Fast Charger Share"
+    )
+
+    st.plotly_chart(
+        fig_reliability,
+        use_container_width=True
+    )
+
+    # -----------------------------
+    # Operator benchmarking
+    # -----------------------------
+
+    st.subheader("Operator Benchmarking for Planning")
+
+    operator_summary = (
+        b2b_df
+        .groupby("operator")
+        .agg(
+            station_count=("station_name", "count"),
+            avg_power_kw=("max_power_kw", "mean"),
+            avg_reliability=("reliability_score", "mean"),
+            ultra_fast_count=("max_power_kw", lambda x: (x >= 150).sum())
+        )
+        .reset_index()
+    )
+
+    operator_summary = operator_summary[
+        operator_summary["operator"] != "Unknown Operator"
+    ].copy()
+
+    if len(operator_summary) > 0:
+
+        operator_summary["ultra_fast_share_%"] = (
+            operator_summary["ultra_fast_count"]
+            / operator_summary["station_count"].replace(0, 1)
+            * 100
+        )
+
+        operator_summary["operator_performance_score"] = (
+            operator_summary["avg_power_kw"].clip(upper=350) / 350 * 30
+            + operator_summary["avg_reliability"].clip(upper=100) / 100 * 45
+            + operator_summary["ultra_fast_share_%"].clip(upper=100) / 100 * 25
+        ).round(2)
+
+        st.dataframe(
+            operator_summary
+            .sort_values("operator_performance_score", ascending=False)
+            .round(2),
+            use_container_width=True
+        )
+
+        fig_operator = px.bar(
+            operator_summary.sort_values(
+                "operator_performance_score",
+                ascending=False
+            ).head(15),
+            x="operator",
+            y="operator_performance_score",
+            hover_data=[
+                "station_count",
+                "avg_power_kw",
+                "avg_reliability",
+                "ultra_fast_share_%"
+            ],
+            title="Top Operator Performance Scores"
+        )
+
+        st.plotly_chart(
+            fig_operator,
+            use_container_width=True
+        )
+
+    else:
+        st.info(
+            "Operator benchmarking is unavailable because operator names are missing or unknown."
+        )
+
+    # -----------------------------
+    # Planning interpretation
+    # -----------------------------
+
+    st.subheader("Planning Interpretation")
 
     st.markdown(
         f"""
-        **Investment focus:** Prioritise **{top_investment_state["state_clean"]}** based on the combined investment priority score.
+        **Key planning insight:**  
+        In this scenario, **{top_investment_state['state_clean']}** has the highest investment priority score.
 
-        **Demand  pressure:** **{top_demand_state["state_clean"]}** shows the highest forecast charging pressure under the current assumptions.
+        This does not automatically mean it has the fewest chargers. The score combines:
+        - charger supply relative to estimated EV adoption
+        - future demand pressure
+        - average charger reliability
+        - ultra-fast charger coverage
 
-        **Charger supply gap:** **{weakest_charger_supply_state["state_clean"]}** has the lowest chargers per 1,000 EVs, suggesting tighter charging supply relative to EV adoption.
+        **Demand pressure insight:**  
+        **{top_demand_state['state_clean']}** shows the highest demand pressure ratio, meaning estimated future public charging demand may place stronger pressure on existing infrastructure.
 
-        **Operator benchmark:** **{best_operator["operator"]}** currently ranks highest among known operators based on public metadata.
+        **Fleet/council use case:**  
+        A fleet or council could use this view to identify where charging coverage may become constrained, where additional chargers may be needed, and where reliability or ultra-fast coverage should be improved.
         """
     )
 
-    # -----------------------------------
-    # STATE INVESTMENT TABLE
-    # -----------------------------------
+    # -----------------------------
+    # Data limitations
+    # -----------------------------
 
-    st.subheader("State Investment Ranking")
-
-    investment_table = (
-        b2b_df[
-            [
-                "state_clean",
-                "estimated_ev_count",
-                "annual_ev_growth_rate",
-                "forecast_evs",
-                "total_stations",
-                "chargers_per_1000_evs",
-                "avg_reliability",
-                "ultra_fast_ratio",
-                "investment_priority_score",
-                "investment_priority_label",
-                "additional_stations_needed",
-                "demand_pressure_index"
-            ]
-        ]
-        .sort_values("investment_priority_score", ascending=False)
-        .round(2)
-    )
-
-    st.dataframe(
-        investment_table,
-        use_container_width=True
-    )
-
-    csv_investment = investment_table.to_csv(index=False)
-
-    st.download_button(
-        "Download State Investment Report CSV",
-        csv_investment,
-        file_name="chargesense_state_investment_report.csv",
-        mime="text/csv"
-    )
-
-    # -----------------------------------
-    # DEMand  FORECAST SUMMARY
-    # -----------------------------------
-
-    st.subheader("Demand  Forecast Summary")
-
-    forecast_summary = (
-        b2b_df[
-            [
-                "state_clean",
-                "estimated_ev_count",
-                "forecast_evs",
-                "monthly_public_sessions",
-                "sessions_per_station_month",
-                "required_stations",
-                "additional_stations_needed",
-                "demand_pressure_index"
-            ]
-        ]
-        .sort_values("demand_pressure_index", ascending=False)
-        .round(2)
-    )
-
-    st.dataframe(
-        forecast_summary,
-        use_container_width=True
-    )
-
-    csv_forecast = forecast_summary.to_csv(index=False)
-
-    st.download_button(
-        "Download Demand  Forecast Report CSV",
-        csv_forecast,
-        file_name="chargesense_demand_forecast_report.csv",
-        mime="text/csv"
-    )
-
-    # -----------------------------------
-    # OPERATOR BENCHMARK SUMMARY
-    # -----------------------------------
-
-    st.subheader("Operator Benchmark Summary")
-
-    operator_benchmark_table = (
-        operator_summary[
-            [
-                "operator",
-                "station_count",
-                "avg_power_kw",
-                "max_power_kw",
-                "ultra_fast_sites",
-                "ultra_fast_share",
-                "avg_reliability",
-                "operator_performance_score"
-            ]
-        ]
-        .sort_values("operator_performance_score", ascending=False)
-        .round(2)
-    )
-
-    st.dataframe(
-        operator_benchmark_table,
-        use_container_width=True
-    )
-
-    csv_operator = operator_benchmark_table.to_csv(index=False)
-
-    st.download_button(
-        "Download Operator Benchmark Report CSV",
-        csv_operator,
-        file_name="chargesense_operator_benchmark_report.csv",
-        mime="text/csv"
-    )
-
-    # -----------------------------------
-    # CHARTS
-    # -----------------------------------
-
-    st.subheader("Investment Priority Score by State")
-
-    investment_chart = b2b_df.sort_values(
-        "investment_priority_score",
-        ascending=False
-    )
-
-    st.bar_chart(
-        investment_chart.set_index("state_clean")["investment_priority_score"]
-    )
-
-    st.subheader("Additional Stations Needed by State")
-
-    additional_station_chart = b2b_df.sort_values(
-        "additional_stations_needed",
-        ascending=False
-    )
-
-    st.bar_chart(
-        additional_station_chart.set_index("state_clean")["additional_stations_needed"]
-    )
-
-    st.subheader("Demand  Pressure Index by State")
-
-    demand_chart = b2b_df.sort_values(
-        "demand_pressure_index",
-        ascending=False
-    )
-
-    st.bar_chart(
-        demand_chart.set_index("state_clean")["demand_pressure_index"]
-    )
-
-    st.subheader("Operator Performance Score")
-
-    operator_chart = operator_summary.sort_values(
-        "operator_performance_score",
-        ascending=False
-    )
-
-    st.bar_chart(
-        operator_chart.set_index("operator")["operator_performance_score"]
-    )
-
-    # -----------------------------------
-    # INTERPRETATION
-    # -----------------------------------
+    st.subheader("Data Limitations")
 
     st.markdown("""
-    ### How to interpret this page
+    This dashboard is a prototype and has several important limitations:
 
-    **Fleet managers** can use this page to understand  charging risk, expected charging demand  and  operator network strength.
+    - EV registration figures are currently estimated at state level.
+    - It does not yet use live charger utilisation or outage data.
+    - It does not include LGA/suburb-level EV adoption.
+    - It does not include grid capacity or site feasibility.
+    - Demand forecasting is scenario-based, not a production statistical forecast.
+    - Operator names and performance depend on available public metadata.
 
-    **Councils** can use this page to identify states or regions where public charging infrastructure may need stronger investment.
-
-    **Charging investors/operators** can use this page to compare demand  pressure, infrastructure gaps and  operator performance.
-
-    The current model is state-level. A future B2B version could extend this to LGA, suburb, corridor, or depot-level planning using richer geographic and  fleet data.
+    A production version would require more granular EV registrations, charger utilisation, live status, traffic demand, grid feasibility and customer-specific route/depot data.
     """)
 
-    st.caption(
-        "This page is designed as a B2B planning prototype. It does not use live charger occupancy, confirmed operator uptime, or private fleet telematics."
+    # -----------------------------
+    # Download report
+    # -----------------------------
+
+    st.subheader("Download Planning Report")
+
+    planning_report = f"""
+Fleet & Council Intelligence Report
+
+Forecast horizon: {forecast_horizon_years} years
+Public charges per EV per month: {public_charges_per_ev_per_month}
+Sessions per charger per month: {sessions_per_charger_per_month}
+
+Highest Investment Priority:
+{top_investment_state['state_clean']} - Score {top_investment_state['investment_priority_score']}
+
+Highest Demand Pressure:
+{top_demand_state['state_clean']} - Demand pressure ratio {round(top_demand_state['demand_pressure_ratio'], 2)}x
+
+Best Average Reliability:
+{best_reliability_state['state_clean']} - Avg reliability {round(best_reliability_state['avg_reliability'], 1)}
+
+Weakest Charger Supply:
+{weakest_supply_state['state_clean']} - {round(weakest_supply_state['chargers_per_1000_evs'], 2)} chargers per 1,000 EVs
+
+Prototype note:
+This report uses public charger metadata and scenario-based assumptions.
+It is not an official forecast.
+"""
+
+    st.code(planning_report)
+
+    st.download_button(
+        "Download Fleet & Council Planning Report",
+        planning_report,
+        file_name="fleet_council_planning_report.txt"
+    )
+
+    csv_state_summary = display_state_summary.to_csv(index=False)
+
+    st.download_button(
+        "Download State Planning CSV",
+        csv_state_summary,
+        file_name="fleet_council_state_planning.csv",
+        mime="text/csv"
     )
 
 elif page == "Route Comparison Mode":
