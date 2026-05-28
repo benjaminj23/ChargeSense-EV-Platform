@@ -9,10 +9,12 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 import plotly.express as px
-import streamlit as st
+import streamlit as st 
 
 st.set_page_config(page_title="ChargeSense", layout="wide")
+from chargesense_crazy_ui import inject_crazy_ui, render_crazy_home_hero
 
+inject_crazy_ui()
 
 @st.cache_data
 def load_data():
@@ -23,11 +25,10 @@ def load_data():
 
 nsw_df, ocm_df, ev_market_df = load_data()
 
-
-
 # -----------------------------
 # DATA PREP
 # -----------------------------
+
 city_coordinates = {
     "Sydney": [151.2093, -33.8688],
     "Melbourne": [144.9631, -37.8136],
@@ -38,10 +39,196 @@ city_coordinates = {
     "Hobart": [147.3272, -42.8821],
     "Darwin": [130.8456, -12.4634]
 }
-ocm_df["max_power_kw"] = pd.to_numeric(ocm_df["max_power_kw"], errors="coerce")
-ocm_df["date_last_verified"] = pd.to_datetime(
-    ocm_df["date_last_verified"], errors="coerce"
+
+
+def infer_state_from_coordinates(lat, lon):
+    if pd.isna(lat) or pd.isna(lon):
+        return "Other / Needs Review"
+
+    # Rough Australian state and territory bounding boxes.
+    # Prototype cleanup only, not official boundary matching.
+
+    state_bounds = {
+        "Australian Capital Territory": {
+            "lat_min": -35.95,
+            "lat_max": -35.10,
+            "lon_min": 148.75,
+            "lon_max": 149.45
+        },
+        "New South Wales": {
+            "lat_min": -37.60,
+            "lat_max": -28.00,
+            "lon_min": 141.00,
+            "lon_max": 154.20
+        },
+        "Victoria": {
+            "lat_min": -39.30,
+            "lat_max": -33.90,
+            "lon_min": 140.90,
+            "lon_max": 150.10
+        },
+        "Queensland": {
+            "lat_min": -29.20,
+            "lat_max": -9.00,
+            "lon_min": 137.80,
+            "lon_max": 153.80
+        },
+        "South Australia": {
+            "lat_min": -38.20,
+            "lat_max": -25.90,
+            "lon_min": 129.00,
+            "lon_max": 141.10
+        },
+        "Western Australia": {
+            "lat_min": -35.20,
+            "lat_max": -13.00,
+            "lon_min": 112.00,
+            "lon_max": 129.10
+        },
+        "Tasmania": {
+            "lat_min": -44.00,
+            "lat_max": -39.00,
+            "lon_min": 143.50,
+            "lon_max": 148.60
+        },
+        "Northern Territory": {
+            "lat_min": -26.10,
+            "lat_max": -10.50,
+            "lon_min": 129.00,
+            "lon_max": 138.10
+        }
+    }
+
+    # ACT must be checked before NSW because ACT sits inside the NSW bounding area.
+    ordered_states = [
+        "Australian Capital Territory",
+        "New South Wales",
+        "Victoria",
+        "Queensland",
+        "South Australia",
+        "Western Australia",
+        "Tasmania",
+        "Northern Territory"
+    ]
+
+    for state in ordered_states:
+        bounds = state_bounds[state]
+
+        if (
+            lat >= bounds["lat_min"]
+            and lat <= bounds["lat_max"]
+            and lon >= bounds["lon_min"]
+            and lon <= bounds["lon_max"]
+        ):
+            return state
+
+    return "Other / Needs Review"
+
+
+# -----------------------------
+# Numeric cleanup
+# -----------------------------
+
+ocm_df["max_power_kw"] = pd.to_numeric(
+    ocm_df["max_power_kw"],
+    errors="coerce"
 )
+
+ocm_df["latitude"] = pd.to_numeric(
+    ocm_df["latitude"],
+    errors="coerce"
+)
+
+ocm_df["longitude"] = pd.to_numeric(
+    ocm_df["longitude"],
+    errors="coerce"
+)
+
+ocm_df["date_last_verified"] = pd.to_datetime(
+    ocm_df["date_last_verified"],
+    errors="coerce"
+)
+
+
+# -----------------------------
+# Keep only Australian charger records
+# -----------------------------
+# This removes accidental overseas records such as UK/Europe points.
+
+ocm_df["is_in_australia"] = (
+    ocm_df["latitude"].between(-44.5, -9.0)
+    & ocm_df["longitude"].between(112.0, 154.5)
+)
+
+ocm_df = ocm_df[
+    ocm_df["is_in_australia"]
+].copy()
+
+
+# -----------------------------
+# Clean / infer state labels
+# -----------------------------
+
+ocm_df["state_clean"] = (
+    ocm_df["state_clean"]
+    .fillna("Other / Needs Review")
+    .astype(str)
+    .str.strip()
+)
+
+state_name_map = {
+    "NSW": "New South Wales",
+    "VIC": "Victoria",
+    "QLD": "Queensland",
+    "WA": "Western Australia",
+    "SA": "South Australia",
+    "TAS": "Tasmania",
+    "ACT": "Australian Capital Territory",
+    "NT": "Northern Territory"
+}
+
+ocm_df["state_clean"] = (
+    ocm_df["state_clean"]
+    .replace(state_name_map)
+)
+
+valid_states = [
+    "New South Wales",
+    "Victoria",
+    "Queensland",
+    "Western Australia",
+    "South Australia",
+    "Tasmania",
+    "Australian Capital Territory",
+    "Northern Territory"
+]
+
+ocm_df["state_from_coordinates"] = ocm_df.apply(
+    lambda row: infer_state_from_coordinates(
+        row["latitude"],
+        row["longitude"]
+    ),
+    axis=1
+)
+
+# Coordinate-based state is treated as the source of truth where available.
+# This fixes records where metadata says NSW but the point is physically in Victoria, etc.
+ocm_df["state_clean"] = ocm_df.apply(
+    lambda row: row["state_from_coordinates"]
+    if row["state_from_coordinates"] in valid_states
+    else row["state_clean"],
+    axis=1
+)
+
+# Remove anything still not assigned to a valid Australian state/territory
+ocm_df = ocm_df[
+    ocm_df["state_clean"].isin(valid_states)
+].copy()
+
+
+# -----------------------------
+# Reliability scoring
+# -----------------------------
 
 latest_date = ocm_df["date_last_verified"].max()
 
@@ -53,12 +240,20 @@ ocm_df["is_recently_verified"] = (
     ocm_df["is_recently_verified"]
     .astype(str)
     .str.lower()
-    .map({"true": 1, "false": 0, "1": 1, "0": 0})
+    .map(
+        {
+            "true": 1,
+            "false": 0,
+            "1": 1,
+            "0": 0
+        }
+    )
     .fillna(0)
 )
 
 ocm_df["data_quality_level"] = pd.to_numeric(
-    ocm_df["data_quality_level"], errors="coerce"
+    ocm_df["data_quality_level"],
+    errors="coerce"
 ).fillna(0)
 
 ocm_df["reliability_score"] = (
@@ -75,13 +270,15 @@ ocm_df["reliability_score"] = (
             / 365
         ) * 100
     ) * 0.45
-) 
+)
 
 ocm_df["reliability_score"] = (
     ocm_df["reliability_score"]
     .clip(lower=0, upper=100)
     .round(2)
 )
+
+
 def haversine_distance(lat1, lon1, lat2, lon2):
     import math
 
@@ -103,6 +300,8 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     c = 2 * math.asin(math.sqrt(a))
 
     return radius_km * c
+
+
 def reliability_label(score):
     if score >= 70:
         return "High"
@@ -113,16 +312,24 @@ def reliability_label(score):
     return "Unknown / Stale"
 
 
-ocm_df["reliability_label"] = ocm_df["reliability_score"].apply(reliability_label)
+ocm_df["reliability_label"] = (
+    ocm_df["reliability_score"]
+    .apply(reliability_label)
+)
+
+
+# -----------------------------
+# State-level population and infrastructure metrics
+# -----------------------------
 
 state_population = {
     "New South Wales": 8500000,
     "Victoria": 6900000,
-    "Queensland ": 5600000,
+    "Queensland": 5600000,
     "Western Australia": 3000000,
     "South Australia": 1900000,
     "Tasmania": 575000,
-    "ACT": 470000,
+    "Australian Capital Territory": 470000,
     "Northern Territory": 260000,
 }
 
@@ -133,35 +340,62 @@ state_metrics = (
     .agg(
         total_stations=("station_name", "count"),
         avg_power_kw=("max_power_kw", "mean"),
-        avg_reliability=( "reliability_score", "mean"),
+        avg_reliability=("reliability_score", "mean"),
         ultra_fast_sites=("speed_category", lambda x: (x == "Ultra-fast DC").sum()),
         population=("population", "first"),
     )
     .reset_index()
 )
 
+state_metrics = state_metrics[
+    state_metrics["state_clean"].isin(state_population.keys())
+].copy()
+
 state_metrics["chargers_per_million"] = (
-    state_metrics["total_stations"] / state_metrics["population"]
+    state_metrics["total_stations"]
+    / state_metrics["population"]
 ) * 1_000_000
 
+state_metrics["chargers_per_million"] = (
+    state_metrics["chargers_per_million"]
+    .replace([float("inf"), -float("inf")], 0)
+    .fillna(0)
+)
+
 state_metrics["ultra_fast_ratio"] = (
-    state_metrics["ultra_fast_sites"] / state_metrics["total_stations"]
+    state_metrics["ultra_fast_sites"]
+    / state_metrics["total_stations"]
+)
+
+state_metrics["ultra_fast_ratio"] = (
+    state_metrics["ultra_fast_ratio"]
+    .replace([float("inf"), -float("inf")], 0)
+    .fillna(0)
 )
 
 state_metrics["infrastructure_gap_score"] = (
     (100 - state_metrics["chargers_per_million"].clip(upper=100)) * 0.4
-    + (100 - state_metrics["avg_reliability"]) * 0.3
-    + (1 - state_metrics["ultra_fast_ratio"]) * 100 * 0.3
+    + (100 - state_metrics["avg_reliability"].fillna(0)) * 0.3
+    + (1 - state_metrics["ultra_fast_ratio"].fillna(0)) * 100 * 0.3
 )
 
 state_metrics["infrastructure_gap_score"] = (
-    state_metrics["infrastructure_gap_score"].clip(lower=0, upper=100).round(2)
+    state_metrics["infrastructure_gap_score"]
+    .clip(lower=0, upper=100)
+    .round(2)
 )
+
+
+# -----------------------------
+# EV market and investment priority metrics
+# -----------------------------
+
 state_metrics = state_metrics.merge(
     ev_market_df,
     on="state_clean",
     how="left"
 )
+
 state_metrics["chargers_per_1000_evs"] = (
     state_metrics["total_stations"]
     / state_metrics["estimated_ev_count"]
@@ -190,6 +424,7 @@ state_metrics["investment_priority_score"] = (
 high_threshold = state_metrics["investment_priority_score"].quantile(0.67)
 medium_threshold = state_metrics["investment_priority_score"].quantile(0.33)
 
+
 def investment_priority_label(score):
     if score >= high_threshold:
         return "High Priority"
@@ -197,20 +432,14 @@ def investment_priority_label(score):
         return "Medium Priority"
     return "Lower Priority"
 
+
 state_metrics["investment_priority_label"] = (
     state_metrics["investment_priority_score"]
     .apply(investment_priority_label)
 )
 
-state_metrics["chargers_per_1000_evs"] = (
-    state_metrics["total_stations"]
-    / state_metrics["estimated_ev_count"]
-) * 1000
 
-state_metrics["chargers_per_1000_evs"] = (
-    state_metrics["chargers_per_1000_evs"]
-    .round(2)
-)
+
 # -----------------------------
 # SIDEBAR
 # -----------------------------
@@ -262,13 +491,15 @@ else:
         ]
     )
 
+
+
 # -----------------------------
 # HOME
 # -----------------------------
 
 if page == "Home":
 
-    st.title("⚡ ChargeSense")
+    render_crazy_home_hero()
 
     st.subheader("EV Infrastructure Intelligence & Route Planning Platform")
 
@@ -516,65 +747,222 @@ elif page == "Infrastructure Gap Analysis":
 # -----------------------------
 
 elif page == "Interactive Map":
+
     st.title("🗺️ Interactive Charger Map")
 
-    st.markdown("Explore EV charging stations across Australia using OpenChargeMap data.")
+    st.markdown(
+        "Explore EV charging stations across Australia using OpenChargeMap data."
+    )
+
+    # -----------------------------
+    # Prepare map data
+    # -----------------------------
+
+    map_df = ocm_df.copy()
+
+    map_df["latitude"] = pd.to_numeric(
+        map_df["latitude"],
+        errors="coerce"
+    )
+
+    map_df["longitude"] = pd.to_numeric(
+        map_df["longitude"],
+        errors="coerce"
+    )
+
+    map_df["max_power_kw"] = pd.to_numeric(
+        map_df["max_power_kw"],
+        errors="coerce"
+    ).fillna(0)
+
+    map_df["station_name"] = map_df["station_name"].fillna("Unknown Station")
+    map_df["town"] = map_df["town"].fillna("")
+    map_df["state_clean"] = map_df["state_clean"].fillna("Unknown")
+
+    map_df = map_df.dropna(
+        subset=[
+            "latitude",
+            "longitude"
+        ]
+    )
+
+    # Keep only official Australian states/territories
+    valid_states = [
+        "New South Wales",
+        "Victoria",
+        "Queensland",
+        "Western Australia",
+        "South Australia",
+        "Tasmania",
+        "Australian Capital Territory",
+        "Northern Territory"
+    ]
+
+    map_df = map_df[
+        map_df["state_clean"].isin(valid_states)
+    ].copy()
+
+    # -----------------------------
+    # State-specific map view settings
+    # -----------------------------
+
+    state_map_view = {
+        "New South Wales": {
+            "lat": -32.8,
+            "lon": 147.0,
+            "zoom": 5.0
+        },
+        "Victoria": {
+            "lat": -37.0,
+            "lon": 144.5,
+            "zoom": 5.5
+        },
+        "Queensland": {
+            "lat": -22.5,
+            "lon": 144.5,
+            "zoom": 4.3
+        },
+        "Western Australia": {
+            "lat": -25.5,
+            "lon": 122.0,
+            "zoom": 4.0
+        },
+        "South Australia": {
+            "lat": -30.0,
+            "lon": 135.0,
+            "zoom": 4.6
+        },
+        "Tasmania": {
+            "lat": -42.0,
+            "lon": 147.0,
+            "zoom": 6.2
+        },
+        "Australian Capital Territory": {
+            "lat": -35.3,
+            "lon": 149.1,
+            "zoom": 8.2
+        },
+        "Northern Territory": {
+            "lat": -19.5,
+            "lon": 133.5,
+            "zoom": 4.8
+        }
+    }
+
+    # -----------------------------
+    # Filters
+    # -----------------------------
 
     col1, col2 = st.columns(2)
 
     with col1:
         selected_state = st.selectbox(
-            "Select State", sorted(ocm_df["state_clean"].dropna().unique())
+            "Select State",
+            sorted(map_df["state_clean"].dropna().unique())
         )
 
     with col2:
-        max_power_available = int(ocm_df["max_power_kw"].fillna(0).max())
-        min_power = st.slider("Minimum Charger Power (kW)", 0, max_power_available, 0)
+        min_power_kw = st.slider(
+            "Minimum Charger Power (kW)",
+            0,
+            350,
+            0,
+            10
+        )
 
-    map_df = ocm_df[
-        (ocm_df["state_clean"] == selected_state)
-        & (ocm_df["max_power_kw"].fillna(0) >= min_power)
+    filtered_map_df = map_df[
+        (map_df["state_clean"] == selected_state)
+        & (map_df["max_power_kw"] >= min_power_kw)
     ].copy()
 
-    map_df["latitude"] = pd.to_numeric(map_df["latitude"], errors="coerce")
-    map_df["longitude"] = pd.to_numeric(map_df["longitude"], errors="coerce")
-    map_df = map_df.dropna(subset=["latitude", "longitude"])
+    st.markdown(
+        f"Showing **{len(filtered_map_df)}** charging stations"
+    )
 
-    map_df["plot_size"] = map_df["max_power_kw"].fillna(1).clip(lower=5, upper=350)
-
-    st.write(f"Showing {len(map_df)} charging stations")
-
-    if len(map_df) == 0:
-        st.warning("No stations match the selected filters.")
-    else:
-        fig = px.scatter_mapbox(
-            map_df,
-            lat="latitude",
-            lon="longitude",
-            hover_name="station_name",
-            hover_data={
-                "state_clean": True,
-                "max_power_kw": True,
-                "speed_category": True,
-                "reliability_score": True,
-                "reliability_label": True,
-                "latitude": False,
-                "longitude": False,
-                "plot_size": False,
-            },
-            color="speed_category",
-            size="plot_size",
-            zoom=5,
-            height=650,
+    if len(filtered_map_df) == 0:
+        st.warning(
+            "No charging stations match the selected filters."
         )
+        st.stop()
 
-        fig.update_layout(
-            mapbox_style="open-street-map",
-            margin={"r": 0, "t": 0, "l": 0, "b": 0},
+    # -----------------------------
+    # Build map
+    # -----------------------------
+
+    selected_view = state_map_view.get(
+        selected_state,
+        {
+            "lat": -25.2744,
+            "lon": 133.7751,
+            "zoom": 3.2
+        }
+    )
+
+    fig = px.scatter_mapbox(
+        filtered_map_df,
+        lat="latitude",
+        lon="longitude",
+        hover_name="station_name",
+        hover_data=[
+            "town",
+            "state_clean",
+            "max_power_kw",
+            "speed_category",
+            "reliability_score",
+            "reliability_label"
+        ],
+        color="speed_category",
+        size="max_power_kw",
+        size_max=18,
+        zoom=selected_view["zoom"],
+        height=650
+    )
+
+    fig.update_layout(
+        mapbox_style="open-street-map",
+        mapbox=dict(
+            center=dict(
+                lat=selected_view["lat"],
+                lon=selected_view["lon"]
+            ),
+            zoom=selected_view["zoom"]
+        ),
+        margin=dict(
+            l=0,
+            r=0,
+            t=0,
+            b=0
         )
+    )
 
-        st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
 
+    # -----------------------------
+    # Optional table
+    # -----------------------------
+
+    st.subheader("Charging Stations in Selected State")
+
+    st.dataframe(
+        filtered_map_df[
+            [
+                "station_name",
+                "town",
+                "state_clean",
+                "max_power_kw",
+                "speed_category",
+                "reliability_score",
+                "reliability_label"
+            ]
+        ].sort_values(
+            "max_power_kw",
+            ascending=False
+        ),
+        use_container_width=True
+    )
 # -----------------------------
 # RELIABILITY INTELLIGENCE
 # -----------------------------
@@ -838,10 +1226,9 @@ elif page == "Reservation Simulation":
     st.title("📅 Charging Slot Reservation Simulation")
 
     st.markdown("""
-    Simulate reserving a future EV charging slot at a selected charging station.
+    Simulate reserving an EV charging slot at a selected charging station.
 
-    This feature demonstrates how a future version of the platform could support charger reservations,
-    planned arrival times, charging duration estimates, and booking confirmation workflows.
+    Users can either simulate an immediate booking using **Book Now**, or schedule a future charging slot.
     """)
 
     st.warning(
@@ -869,7 +1256,9 @@ elif page == "Reservation Simulation":
         else:
             base_availability -= 15
 
-        if selected_time_period == "Morning Peak":
+        if selected_time_period == "Now / Immediate":
+            base_availability -= 5
+        elif selected_time_period == "Morning Peak":
             base_availability -= 15
         elif selected_time_period == "Afternoon Peak":
             base_availability -= 20
@@ -901,11 +1290,13 @@ elif page == "Reservation Simulation":
 
     reservation_df["station_name"] = reservation_df["station_name"].fillna("Unknown Station")
     reservation_df["town"] = reservation_df["town"].fillna("")
-    reservation_df["state_clean"] = reservation_df["state_clean"].fillna("")
+    reservation_df["state_clean"] = reservation_df["state_clean"].fillna("Unknown")
+
     reservation_df["max_power_kw"] = pd.to_numeric(
         reservation_df["max_power_kw"],
         errors="coerce"
     )
+
     reservation_df["reliability_score"] = pd.to_numeric(
         reservation_df["reliability_score"],
         errors="coerce"
@@ -919,21 +1310,45 @@ elif page == "Reservation Simulation":
         + reservation_df["state_clean"].astype(str)
     )
 
-    station_options = sorted(
-        reservation_df["station_display_name"]
-        .dropna()
-        .unique()
-    )
-
     # -----------------------------
-    # Inputs
+    # Station selection
     # -----------------------------
 
     st.subheader("Select Charging Station")
 
+    available_states = sorted(
+        reservation_df["state_clean"]
+        .dropna()
+        .unique()
+    )
+
+    available_states = [
+        state for state in available_states
+        if str(state).strip() != "" and str(state) != "Unknown"
+    ]
+
+    if len(available_states) == 0:
+        st.error("No valid state or territory data available for charger selection.")
+        st.stop()
+
+    selected_state = st.selectbox(
+        "Select state / territory",
+        available_states
+    )
+
+    state_station_df = reservation_df[
+        reservation_df["state_clean"] == selected_state
+    ].copy()
+
+    station_options = sorted(
+        state_station_df["station_display_name"]
+        .dropna()
+        .unique()
+    )
+
     station_search = st.text_input(
-        "Search charging station",
-        placeholder="Search by station name, town, or state. Example: Tesla, Coolac, Barnawartha"
+        "Search charging station within selected state",
+        placeholder="Search by station name or town. Example: Tesla, Coolac, Barnawartha"
     )
 
     if station_search.strip() != "":
@@ -947,7 +1362,7 @@ elif page == "Reservation Simulation":
 
     if len(filtered_station_options) == 0:
         st.warning(
-            "No stations matched your search. Try a different station name, town, or operator."
+            "No stations matched your search in this state. Try a different station name or town."
         )
         st.stop()
 
@@ -968,69 +1383,108 @@ elif page == "Reservation Simulation":
 
     selected_station = selected_station_rows.iloc[0]
 
-    st.subheader("Reservation Details")
+    # -----------------------------
+    # Booking mode
+    # -----------------------------
 
-    col1, col2 = st.columns(2)
+    st.subheader("Booking Mode")
 
-    with col1:
-        reservation_date = st.date_input(
-            "Reservation date"
-        )
-
-    with col2:
-        reservation_time = st.time_input(
-            "Reservation time"
-        )
-
-    col3, col4 = st.columns(2)
-
-    with col3:
-        expected_duration_min = st.slider(
-            "Expected charging duration (minutes)",
-            15,
-            120,
-            45,
-            5
-        )
-
-    with col4:
-        selected_time_period = st.selectbox(
-            "Expected demand period",
-            [
-                "Off-peak",
-                "Morning Peak",
-                "Daytime",
-                "Afternoon Peak",
-                "Evening",
-                "Holiday / Long Weekend"
-            ]
-        )
-
-    ev_options = [
-        "Tesla Model 3 RWD",
-        "Tesla Model Y RWD",
-        "BYD Atto 3",
-        "BYD Seal",
-        "Kia EV6",
-        "Hyundai Ioniq 5",
-        "MG4 Excite 51",
-        "Other EV"
-    ]
-
-    selected_ev = st.selectbox(
-        "Vehicle",
-        ev_options
+    booking_mode = st.radio(
+        "Choose booking type",
+        ["Book Now", "Schedule Future Slot"],
+        horizontal=True
     )
 
-    driver_name = st.text_input(
-        "Driver name",
-        placeholder="Example: Benjamin Joseph"
-    )
+    now = datetime.now()
 
-    vehicle_plate = st.text_input(
-        "Vehicle plate / reference",
-        placeholder="Optional"
-    )
+    if booking_mode == "Book Now":
+
+        reservation_date = now.date()
+        reservation_time = now.time().replace(second=0, microsecond=0)
+        expected_duration_min = 30
+        selected_time_period = "Now / Immediate"
+        selected_ev = "Not specified"
+        driver_name = ""
+        vehicle_plate = ""
+
+        st.info(
+            f"Book Now selected. The simulated booking will use the current date and time: "
+            f"{reservation_date} at {reservation_time}."
+        )
+
+        st.caption(
+            "For Book Now, the app uses a default 30-minute charging session and immediate demand conditions."
+        )
+
+    else:
+
+        st.subheader("Future Reservation Details")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            reservation_date = st.date_input(
+                "Reservation date"
+            )
+
+        with col2:
+            reservation_time = st.time_input(
+                "Reservation time"
+            )
+
+        col3, col4 = st.columns(2)
+
+        with col3:
+            expected_duration_min = st.slider(
+                "Expected charging duration (minutes)",
+                15,
+                120,
+                45,
+                5
+            )
+
+        with col4:
+            selected_time_period = st.selectbox(
+                "Expected demand period",
+                [
+                    "Off-peak",
+                    "Morning Peak",
+                    "Daytime",
+                    "Afternoon Peak",
+                    "Evening",
+                    "Holiday / Long Weekend"
+                ]
+            )
+
+        ev_options = [
+            "Tesla Model 3 RWD",
+            "Tesla Model Y RWD",
+            "BYD Atto 3",
+            "BYD Seal",
+            "Kia EV6",
+            "Hyundai Ioniq 5",
+            "MG4 Excite 51",
+            "Other EV"
+        ]
+
+        selected_ev = st.selectbox(
+            "Vehicle",
+            ev_options
+        )
+
+        driver_name = st.text_input(
+            "Driver name",
+            placeholder="Example: Benjamin Joseph"
+        )
+
+        vehicle_plate = st.text_input(
+            "Vehicle plate / reference",
+            placeholder="Optional"
+        )
+
+    # -----------------------------
+    # Station snapshot
+    # -----------------------------
 
     st.subheader("Station Snapshot")
 
@@ -1059,7 +1513,12 @@ elif page == "Reservation Simulation":
     # Simulate availability
     # -----------------------------
 
-    simulate_booking = st.button("Check Simulated Slot Availability")
+    if booking_mode == "Book Now":
+        button_label = "Check Simulated Availability Now"
+    else:
+        button_label = "Check Simulated Future Slot Availability"
+
+    simulate_booking = st.button(button_label)
 
     if simulate_booking:
 
@@ -1096,11 +1555,11 @@ elif page == "Reservation Simulation":
             )
         elif slot_status == "Limited Availability":
             st.warning(
-                "This simulated slot may have limited availability. Consider choosing a different time or allowing extra wait time."
+                "This simulated slot may have limited availability. Consider allowing extra wait time or checking another nearby station."
             )
         else:
             st.error(
-                "This simulated slot has high booking risk. Consider selecting an off-peak time or another station."
+                "This simulated slot has high booking risk. Consider another station or a lower-demand time."
             )
 
         # -----------------------------
@@ -1113,9 +1572,11 @@ elif page == "Reservation Simulation":
 
         reservation_summary = f"""
 Reservation Type: Simulated EV Charging Slot
+Booking Mode: {booking_mode}
 Booking Code: EV-{booking_code}
 
 Station: {selected_station_display}
+State / Territory: {selected_state}
 Vehicle: {selected_ev}
 Driver: {driver_name if driver_name.strip() != "" else "Not provided"}
 Vehicle Plate / Reference: {vehicle_plate if vehicle_plate.strip() != "" else "Not provided"}
