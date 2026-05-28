@@ -225,12 +225,29 @@ def inject_crazy_ui():
         }
 
         .cs-hero-title {
+            display: flex;
+            align-items: center;
+            gap: 14px;
             margin-top: 20px;
             font-size: clamp(2.8rem, 6vw, 5.6rem);
             line-height: 0.95;
             font-weight: 950;
             color: var(--cs-text);
             text-shadow: none;
+        }
+
+        .cs-hero-bolt {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: clamp(3.2rem, 6vw, 5.4rem);
+            height: clamp(3.2rem, 6vw, 5.4rem);
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--cs-primary), var(--cs-accent));
+            color: #06111f;
+            font-size: 0.72em;
+            box-shadow: 0 12px 28px rgba(73, 184, 232, 0.2);
+            flex: 0 0 auto;
         }
 
         .cs-hero-copy {
@@ -431,6 +448,7 @@ def inject_crazy_ui():
 
             .cs-hero-title {
                 font-size: 3rem;
+                flex-wrap: wrap;
             }
         }
         </style>
@@ -445,7 +463,7 @@ def render_crazy_home_hero():
         <section class="cs-hero">
             <div class="cs-hero-inner">
                 <div class="cs-kicker">Live EV infrastructure command deck</div>
-                <div class="cs-hero-title">ChargeSense</div>
+                <div class="cs-hero-title"><span class="cs-hero-bolt">⚡</span><span>ChargeSense</span></div>
                 <div class="cs-hero-copy">
                     Route planning, charger trust, fleet pressure, operator benchmarking, and investment intelligence
                     in one high-voltage prototype for Australia's EV charging network.
