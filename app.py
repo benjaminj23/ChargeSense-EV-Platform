@@ -26,7 +26,6 @@ def load_data():
 nsw_df, ocm_df, ev_market_df = load_data()
 
 
-
 # -----------------------------
 # DATA PREP
 # -----------------------------
@@ -40,9 +39,160 @@ city_coordinates = {
     "Hobart": [147.3272, -42.8821],
     "Darwin": [130.8456, -12.4634]
 }
-ocm_df["max_power_kw"] = pd.to_numeric(ocm_df["max_power_kw"], errors="coerce")
+
+
+def infer_state_from_coordinates(lat, lon):
+    if pd.isna(lat) or pd.isna(lon):
+        return "Other / Needs Review"
+
+    # Rough Australian state and territory bounding boxes.
+    # Prototype cleanup only, not official boundary matching.
+
+    state_bounds = {
+        "Australian Capital Territory": {
+            "lat_min": -35.95,
+            "lat_max": -35.10,
+            "lon_min": 148.75,
+            "lon_max": 149.45
+        },
+        "New South Wales": {
+            "lat_min": -37.60,
+            "lat_max": -28.00,
+            "lon_min": 141.00,
+            "lon_max": 154.20
+        },
+        "Victoria": {
+            "lat_min": -39.30,
+            "lat_max": -33.90,
+            "lon_min": 140.90,
+            "lon_max": 150.10
+        },
+        "Queensland": {
+            "lat_min": -29.20,
+            "lat_max": -9.00,
+            "lon_min": 137.80,
+            "lon_max": 153.80
+        },
+        "South Australia": {
+            "lat_min": -38.20,
+            "lat_max": -25.90,
+            "lon_min": 129.00,
+            "lon_max": 141.10
+        },
+        "Western Australia": {
+            "lat_min": -35.20,
+            "lat_max": -13.00,
+            "lon_min": 112.00,
+            "lon_max": 129.10
+        },
+        "Tasmania": {
+            "lat_min": -44.00,
+            "lat_max": -39.00,
+            "lon_min": 143.50,
+            "lon_max": 148.60
+        },
+        "Northern Territory": {
+            "lat_min": -26.10,
+            "lat_max": -10.50,
+            "lon_min": 129.00,
+            "lon_max": 138.10
+        }
+    }
+
+    ordered_states = [
+        "Australian Capital Territory",
+        "New South Wales",
+        "Victoria",
+        "Queensland",
+        "South Australia",
+        "Western Australia",
+        "Tasmania",
+        "Northern Territory"
+    ]
+
+    for state in ordered_states:
+        bounds = state_bounds[state]
+
+        if (
+            lat >= bounds["lat_min"]
+            and lat <= bounds["lat_max"]
+            and lon >= bounds["lon_min"]
+            and lon <= bounds["lon_max"]
+        ):
+            return state
+
+    return "Other / Needs Review"
+
+
+ocm_df["max_power_kw"] = pd.to_numeric(
+    ocm_df["max_power_kw"],
+    errors="coerce"
+)
+
+ocm_df["latitude"] = pd.to_numeric(
+    ocm_df["latitude"],
+    errors="coerce"
+)
+
+ocm_df["longitude"] = pd.to_numeric(
+    ocm_df["longitude"],
+    errors="coerce"
+)
+
 ocm_df["date_last_verified"] = pd.to_datetime(
-    ocm_df["date_last_verified"], errors="coerce"
+    ocm_df["date_last_verified"],
+    errors="coerce"
+)
+
+# -----------------------------
+# Clean / infer state labels
+# -----------------------------
+
+ocm_df["state_clean"] = (
+    ocm_df["state_clean"]
+    .fillna("Other / Needs Review")
+    .astype(str)
+    .str.strip()
+)
+
+ocm_df["state_from_coordinates"] = ocm_df.apply(
+    lambda row: infer_state_from_coordinates(
+        row["latitude"],
+        row["longitude"]
+    ),
+    axis=1
+)
+
+ocm_df["state_clean"] = ocm_df.apply(
+    lambda row: row["state_from_coordinates"]
+    if str(row["state_clean"]).strip() in [
+        "",
+        "nan",
+        "None",
+        "Unknown",
+        "Other",
+        "Other / Needs Review",
+        "Needs Review"
+    ]
+    else row["state_clean"],
+    axis=1
+)
+
+# Optional: standardise abbreviations if any appear
+state_name_map = {
+    "NSW": "New South Wales",
+    "VIC": "Victoria",
+    "QLD": "Queensland",
+    "WA": "Western Australia",
+    "SA": "South Australia",
+    "TAS": "Tasmania",
+    "ACT": "Australian Capital Territory",
+    "NT": "Northern Territory"
+}
+
+ocm_df["state_clean"] = (
+    ocm_df["state_clean"]
+    .replace(state_name_map)
 )
 
 latest_date = ocm_df["date_last_verified"].max()
@@ -60,7 +210,8 @@ ocm_df["is_recently_verified"] = (
 )
 
 ocm_df["data_quality_level"] = pd.to_numeric(
-    ocm_df["data_quality_level"], errors="coerce"
+    ocm_df["data_quality_level"],
+    errors="coerce"
 ).fillna(0)
 
 ocm_df["reliability_score"] = (
@@ -77,13 +228,15 @@ ocm_df["reliability_score"] = (
             / 365
         ) * 100
     ) * 0.45
-) 
+)
 
 ocm_df["reliability_score"] = (
     ocm_df["reliability_score"]
     .clip(lower=0, upper=100)
     .round(2)
 )
+
+
 def haversine_distance(lat1, lon1, lat2, lon2):
     import math
 
@@ -105,6 +258,8 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     c = 2 * math.asin(math.sqrt(a))
 
     return radius_km * c
+
+
 def reliability_label(score):
     if score >= 70:
         return "High"
@@ -115,16 +270,19 @@ def reliability_label(score):
     return "Unknown / Stale"
 
 
-ocm_df["reliability_label"] = ocm_df["reliability_score"].apply(reliability_label)
+ocm_df["reliability_label"] = (
+    ocm_df["reliability_score"]
+    .apply(reliability_label)
+)
 
 state_population = {
     "New South Wales": 8500000,
     "Victoria": 6900000,
-    "Queensland ": 5600000,
+    "Queensland": 5600000,
     "Western Australia": 3000000,
     "South Australia": 1900000,
     "Tasmania": 575000,
-    "ACT": 470000,
+    "Australian Capital Territory": 470000,
     "Northern Territory": 260000,
 }
 
@@ -135,7 +293,7 @@ state_metrics = (
     .agg(
         total_stations=("station_name", "count"),
         avg_power_kw=("max_power_kw", "mean"),
-        avg_reliability=( "reliability_score", "mean"),
+        avg_reliability=("reliability_score", "mean"),
         ultra_fast_sites=("speed_category", lambda x: (x == "Ultra-fast DC").sum()),
         population=("population", "first"),
     )
@@ -146,24 +304,40 @@ state_metrics["chargers_per_million"] = (
     state_metrics["total_stations"] / state_metrics["population"]
 ) * 1_000_000
 
+state_metrics["chargers_per_million"] = (
+    state_metrics["chargers_per_million"]
+    .replace([float("inf"), -float("inf")], 0)
+    .fillna(0)
+)
+
 state_metrics["ultra_fast_ratio"] = (
     state_metrics["ultra_fast_sites"] / state_metrics["total_stations"]
 )
 
-state_metrics["infrastructure_gap_score"] = (
-    (100 - state_metrics["chargers_per_million"].clip(upper=100)) * 0.4
-    + (100 - state_metrics["avg_reliability"]) * 0.3
-    + (1 - state_metrics["ultra_fast_ratio"]) * 100 * 0.3
+state_metrics["ultra_fast_ratio"] = (
+    state_metrics["ultra_fast_ratio"]
+    .replace([float("inf"), -float("inf")], 0)
+    .fillna(0)
 )
 
 state_metrics["infrastructure_gap_score"] = (
-    state_metrics["infrastructure_gap_score"].clip(lower=0, upper=100).round(2)
+    (100 - state_metrics["chargers_per_million"].clip(upper=100)) * 0.4
+    + (100 - state_metrics["avg_reliability"].fillna(0)) * 0.3
+    + (1 - state_metrics["ultra_fast_ratio"].fillna(0)) * 100 * 0.3
 )
+
+state_metrics["infrastructure_gap_score"] = (
+    state_metrics["infrastructure_gap_score"]
+    .clip(lower=0, upper=100)
+    .round(2)
+)
+
 state_metrics = state_metrics.merge(
     ev_market_df,
     on="state_clean",
     how="left"
 )
+
 state_metrics["chargers_per_1000_evs"] = (
     state_metrics["total_stations"]
     / state_metrics["estimated_ev_count"]
@@ -192,6 +366,7 @@ state_metrics["investment_priority_score"] = (
 high_threshold = state_metrics["investment_priority_score"].quantile(0.67)
 medium_threshold = state_metrics["investment_priority_score"].quantile(0.33)
 
+
 def investment_priority_label(score):
     if score >= high_threshold:
         return "High Priority"
@@ -199,20 +374,14 @@ def investment_priority_label(score):
         return "Medium Priority"
     return "Lower Priority"
 
+
 state_metrics["investment_priority_label"] = (
     state_metrics["investment_priority_score"]
     .apply(investment_priority_label)
 )
 
-state_metrics["chargers_per_1000_evs"] = (
-    state_metrics["total_stations"]
-    / state_metrics["estimated_ev_count"]
-) * 1000
 
-state_metrics["chargers_per_1000_evs"] = (
-    state_metrics["chargers_per_1000_evs"]
-    .round(2)
-)
+
 # -----------------------------
 # SIDEBAR
 # -----------------------------
@@ -263,6 +432,8 @@ else:
             "Project Insights"
         ]
     )
+
+
 
 # -----------------------------
 # HOME
