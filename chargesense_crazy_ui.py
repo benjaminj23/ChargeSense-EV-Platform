@@ -8,15 +8,15 @@ def inject_crazy_ui():
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
 
         :root {
-            --cs-bg: #b9cfdd;
-            --cs-panel: rgba(245, 250, 253, 0.9);
-            --cs-panel-strong: rgba(250, 253, 255, 0.96);
-            --cs-text: #102033;
-            --cs-muted: #536879;
-            --cs-primary: #08779b;
-            --cs-primary-soft: #d6eef6;
-            --cs-accent: #2fb37c;
-            --cs-line: #9fb9c8;
+            --cs-bg: #0b1727;
+            --cs-panel: rgba(18, 34, 54, 0.9);
+            --cs-panel-strong: rgba(22, 42, 66, 0.96);
+            --cs-text: #f4f8fc;
+            --cs-muted: #b8c8d8;
+            --cs-primary: #49b8e8;
+            --cs-primary-soft: rgba(73, 184, 232, 0.16);
+            --cs-accent: #47d18c;
+            --cs-line: rgba(171, 207, 226, 0.22);
             --cs-warning: #f2a93b;
         }
 
@@ -27,7 +27,7 @@ def inject_crazy_ui():
         .stApp {
             color: var(--cs-text);
             background:
-                linear-gradient(180deg, rgba(148, 180, 199, 0.98), rgba(185, 207, 221, 0.98) 34%, rgba(166, 193, 209, 0.98)),
+                linear-gradient(180deg, #0f2238, #0b1727 34%, #081321),
                 var(--cs-bg);
             overflow-x: hidden;
         }
@@ -39,8 +39,8 @@ def inject_crazy_ui():
             pointer-events: none;
             opacity: 0.22;
             background-image:
-                linear-gradient(rgba(8, 126, 164, 0.1) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(8, 126, 164, 0.1) 1px, transparent 1px);
+                linear-gradient(rgba(117, 192, 228, 0.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(117, 192, 228, 0.07) 1px, transparent 1px);
             background-size: 42px 42px;
             mask-image: linear-gradient(to bottom, black, transparent 72%);
             z-index: 0;
@@ -56,9 +56,9 @@ def inject_crazy_ui():
 
         [data-testid="stSidebar"] {
             background:
-                linear-gradient(180deg, #102033, #0b1727);
-            border-right: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 10px 0 34px rgba(8, 65, 92, 0.16);
+                linear-gradient(180deg, #18314d, #12263d);
+            border-right: 1px solid rgba(255, 255, 255, 0.16);
+            box-shadow: 12px 0 38px rgba(0, 0, 0, 0.22);
         }
 
         [data-testid="stSidebar"] h1,
@@ -88,6 +88,38 @@ def inject_crazy_ui():
 
         [data-testid="stSidebar"] [role="radiogroup"] label {
             color: #f7fbff !important;
+        }
+
+        [data-testid="stSidebar"] [role="radiogroup"] label > div:first-child {
+            border-color: rgba(255, 255, 255, 0.36) !important;
+        }
+
+        [data-testid="stSidebar"] [role="radiogroup"] label {
+            width: 100%;
+            padding: 8px 10px;
+            margin: 2px 0;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            transition:
+                background 150ms ease,
+                border-color 150ms ease,
+                transform 150ms ease,
+                box-shadow 150ms ease;
+        }
+
+        [data-testid="stSidebar"] [role="radiogroup"] label:hover {
+            background: rgba(73, 184, 232, 0.13);
+            border-color: rgba(73, 184, 232, 0.36);
+            transform: translateX(3px);
+            box-shadow: inset 3px 0 0 var(--cs-primary);
+            cursor: pointer;
+        }
+
+        [data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked),
+        [data-testid="stSidebar"] [role="radiogroup"] label[data-checked="true"] {
+            background: rgba(73, 184, 232, 0.2);
+            border-color: rgba(73, 184, 232, 0.5);
+            box-shadow: inset 4px 0 0 var(--cs-accent), 0 8px 18px rgba(0, 0, 0, 0.14);
         }
 
         [data-testid="stSidebar"] [data-testid="stWidgetLabel"],
@@ -151,8 +183,8 @@ def inject_crazy_ui():
             border: 1px solid var(--cs-line);
             border-radius: 8px;
             background:
-                linear-gradient(135deg, rgba(230, 243, 249, 0.96), rgba(248, 252, 254, 0.98));
-            box-shadow: 0 18px 45px rgba(8, 65, 92, 0.16);
+                linear-gradient(135deg, rgba(25, 50, 78, 0.96), rgba(15, 34, 56, 0.98));
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.22);
             overflow: hidden;
         }
 
@@ -165,7 +197,7 @@ def inject_crazy_ui():
                     115deg,
                     transparent 0,
                     transparent 18px,
-                    rgba(8, 126, 164, 0.08) 19px,
+                    rgba(73, 184, 232, 0.08) 19px,
                     transparent 21px
                 );
             animation: cs-scan 8s linear infinite;
@@ -220,7 +252,7 @@ def inject_crazy_ui():
             padding: 9px 12px;
             border-radius: 999px;
             border: 1px solid var(--cs-line);
-            background: rgba(248, 252, 254, 0.82);
+            background: rgba(255, 255, 255, 0.06);
             color: var(--cs-primary);
             font-weight: 750;
             box-shadow: none;
@@ -233,7 +265,7 @@ def inject_crazy_ui():
             border-radius: 8px;
             border: 1px solid var(--cs-line);
             background: var(--cs-panel-strong);
-            box-shadow: 0 14px 36px rgba(8, 65, 92, 0.14);
+            box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
             overflow: hidden;
         }
 
@@ -287,8 +319,8 @@ def inject_crazy_ui():
         .stAlert {
             border-radius: 8px !important;
             border: 1px solid var(--cs-line) !important;
-            background: rgba(248, 252, 254, 0.9) !important;
-            box-shadow: 0 14px 36px rgba(8, 65, 92, 0.12);
+            background: var(--cs-panel) !important;
+            box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
             overflow: hidden;
         }
 
@@ -321,8 +353,8 @@ def inject_crazy_ui():
         .stTimeInput input {
             border-radius: 8px !important;
             border: 1px solid var(--cs-line) !important;
-            background: rgba(250, 253, 255, 0.96) !important;
-            color: var(--cs-text) !important;
+            background: rgba(245, 250, 253, 0.96) !important;
+            color: #102033 !important;
             box-shadow: none;
         }
 
@@ -340,7 +372,7 @@ def inject_crazy_ui():
         pre {
             border-radius: 8px !important;
             border: 1px solid var(--cs-line) !important;
-            background: rgba(250, 253, 255, 0.96) !important;
+            background: rgba(8, 19, 33, 0.92) !important;
             box-shadow: none;
         }
 
