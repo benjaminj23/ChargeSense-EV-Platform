@@ -56,16 +56,38 @@ def inject_crazy_ui():
 
         [data-testid="stSidebar"] {
             background:
-                linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(232, 247, 252, 0.98));
-            border-right: 1px solid var(--cs-line);
-            box-shadow: 10px 0 34px rgba(8, 65, 92, 0.08);
+                linear-gradient(180deg, #102033, #0b1727);
+            border-right: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 10px 0 34px rgba(8, 65, 92, 0.16);
         }
 
         [data-testid="stSidebar"] h1,
         [data-testid="stSidebar"] h2,
         [data-testid="stSidebar"] h3,
         [data-testid="stSidebar"] label {
-            color: var(--cs-text) !important;
+            color: #f7fbff !important;
+        }
+
+        [data-testid="stSidebar"] h1 {
+            font-size: 2rem !important;
+            line-height: 1.05 !important;
+            overflow-wrap: normal !important;
+            word-break: keep-all !important;
+            text-shadow: none !important;
+        }
+
+        [data-testid="stSidebar"] p,
+        [data-testid="stSidebar"] span,
+        [data-testid="stSidebar"] div {
+            color: #dce9f5 !important;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+            color: #dce9f5 !important;
+        }
+
+        [data-testid="stSidebar"] [role="radiogroup"] label {
+            color: #f7fbff !important;
         }
 
         [data-testid="stSidebar"] [role="radiogroup"] label,
