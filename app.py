@@ -838,10 +838,9 @@ elif page == "Reservation Simulation":
     st.title("📅 Charging Slot Reservation Simulation")
 
     st.markdown("""
-    Simulate reserving a future EV charging slot at a selected charging station.
+    Simulate reserving an EV charging slot at a selected charging station.
 
-    This feature demonstrates how a future version of the platform could support charger reservations,
-    planned arrival times, charging duration estimates, and booking confirmation workflows.
+    Users can either simulate an immediate booking using **Book Now**, or schedule a future charging slot.
     """)
 
     st.warning(
@@ -869,7 +868,9 @@ elif page == "Reservation Simulation":
         else:
             base_availability -= 15
 
-        if selected_time_period == "Morning Peak":
+        if selected_time_period == "Now / Immediate":
+            base_availability -= 5
+        elif selected_time_period == "Morning Peak":
             base_availability -= 15
         elif selected_time_period == "Afternoon Peak":
             base_availability -= 20
@@ -901,11 +902,13 @@ elif page == "Reservation Simulation":
 
     reservation_df["station_name"] = reservation_df["station_name"].fillna("Unknown Station")
     reservation_df["town"] = reservation_df["town"].fillna("")
-    reservation_df["state_clean"] = reservation_df["state_clean"].fillna("")
+    reservation_df["state_clean"] = reservation_df["state_clean"].fillna("Unknown")
+
     reservation_df["max_power_kw"] = pd.to_numeric(
         reservation_df["max_power_kw"],
         errors="coerce"
     )
+
     reservation_df["reliability_score"] = pd.to_numeric(
         reservation_df["reliability_score"],
         errors="coerce"
@@ -919,21 +922,45 @@ elif page == "Reservation Simulation":
         + reservation_df["state_clean"].astype(str)
     )
 
-    station_options = sorted(
-        reservation_df["station_display_name"]
-        .dropna()
-        .unique()
-    )
-
     # -----------------------------
-    # Inputs
+    # Station selection
     # -----------------------------
 
     st.subheader("Select Charging Station")
 
+    available_states = sorted(
+        reservation_df["state_clean"]
+        .dropna()
+        .unique()
+    )
+
+    available_states = [
+        state for state in available_states
+        if str(state).strip() != "" and str(state) != "Unknown"
+    ]
+
+    if len(available_states) == 0:
+        st.error("No valid state or territory data available for charger selection.")
+        st.stop()
+
+    selected_state = st.selectbox(
+        "Select state / territory",
+        available_states
+    )
+
+    state_station_df = reservation_df[
+        reservation_df["state_clean"] == selected_state
+    ].copy()
+
+    station_options = sorted(
+        state_station_df["station_display_name"]
+        .dropna()
+        .unique()
+    )
+
     station_search = st.text_input(
-        "Search charging station",
-        placeholder="Search by station name, town, or state. Example: Tesla, Coolac, Barnawartha"
+        "Search charging station within selected state",
+        placeholder="Search by station name or town. Example: Tesla, Coolac, Barnawartha"
     )
 
     if station_search.strip() != "":
@@ -947,7 +974,7 @@ elif page == "Reservation Simulation":
 
     if len(filtered_station_options) == 0:
         st.warning(
-            "No stations matched your search. Try a different station name, town, or operator."
+            "No stations matched your search in this state. Try a different station name or town."
         )
         st.stop()
 
@@ -968,69 +995,108 @@ elif page == "Reservation Simulation":
 
     selected_station = selected_station_rows.iloc[0]
 
-    st.subheader("Reservation Details")
+    # -----------------------------
+    # Booking mode
+    # -----------------------------
 
-    col1, col2 = st.columns(2)
+    st.subheader("Booking Mode")
 
-    with col1:
-        reservation_date = st.date_input(
-            "Reservation date"
-        )
-
-    with col2:
-        reservation_time = st.time_input(
-            "Reservation time"
-        )
-
-    col3, col4 = st.columns(2)
-
-    with col3:
-        expected_duration_min = st.slider(
-            "Expected charging duration (minutes)",
-            15,
-            120,
-            45,
-            5
-        )
-
-    with col4:
-        selected_time_period = st.selectbox(
-            "Expected demand period",
-            [
-                "Off-peak",
-                "Morning Peak",
-                "Daytime",
-                "Afternoon Peak",
-                "Evening",
-                "Holiday / Long Weekend"
-            ]
-        )
-
-    ev_options = [
-        "Tesla Model 3 RWD",
-        "Tesla Model Y RWD",
-        "BYD Atto 3",
-        "BYD Seal",
-        "Kia EV6",
-        "Hyundai Ioniq 5",
-        "MG4 Excite 51",
-        "Other EV"
-    ]
-
-    selected_ev = st.selectbox(
-        "Vehicle",
-        ev_options
+    booking_mode = st.radio(
+        "Choose booking type",
+        ["Book Now", "Schedule Future Slot"],
+        horizontal=True
     )
 
-    driver_name = st.text_input(
-        "Driver name",
-        placeholder="Example: Benjamin Joseph"
-    )
+    now = datetime.now()
 
-    vehicle_plate = st.text_input(
-        "Vehicle plate / reference",
-        placeholder="Optional"
-    )
+    if booking_mode == "Book Now":
+
+        reservation_date = now.date()
+        reservation_time = now.time().replace(second=0, microsecond=0)
+        expected_duration_min = 30
+        selected_time_period = "Now / Immediate"
+        selected_ev = "Not specified"
+        driver_name = ""
+        vehicle_plate = ""
+
+        st.info(
+            f"Book Now selected. The simulated booking will use the current date and time: "
+            f"{reservation_date} at {reservation_time}."
+        )
+
+        st.caption(
+            "For Book Now, the app uses a default 30-minute charging session and immediate demand conditions."
+        )
+
+    else:
+
+        st.subheader("Future Reservation Details")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            reservation_date = st.date_input(
+                "Reservation date"
+            )
+
+        with col2:
+            reservation_time = st.time_input(
+                "Reservation time"
+            )
+
+        col3, col4 = st.columns(2)
+
+        with col3:
+            expected_duration_min = st.slider(
+                "Expected charging duration (minutes)",
+                15,
+                120,
+                45,
+                5
+            )
+
+        with col4:
+            selected_time_period = st.selectbox(
+                "Expected demand period",
+                [
+                    "Off-peak",
+                    "Morning Peak",
+                    "Daytime",
+                    "Afternoon Peak",
+                    "Evening",
+                    "Holiday / Long Weekend"
+                ]
+            )
+
+        ev_options = [
+            "Tesla Model 3 RWD",
+            "Tesla Model Y RWD",
+            "BYD Atto 3",
+            "BYD Seal",
+            "Kia EV6",
+            "Hyundai Ioniq 5",
+            "MG4 Excite 51",
+            "Other EV"
+        ]
+
+        selected_ev = st.selectbox(
+            "Vehicle",
+            ev_options
+        )
+
+        driver_name = st.text_input(
+            "Driver name",
+            placeholder="Example: Benjamin Joseph"
+        )
+
+        vehicle_plate = st.text_input(
+            "Vehicle plate / reference",
+            placeholder="Optional"
+        )
+
+    # -----------------------------
+    # Station snapshot
+    # -----------------------------
 
     st.subheader("Station Snapshot")
 
@@ -1059,7 +1125,12 @@ elif page == "Reservation Simulation":
     # Simulate availability
     # -----------------------------
 
-    simulate_booking = st.button("Check Simulated Slot Availability")
+    if booking_mode == "Book Now":
+        button_label = "Check Simulated Availability Now"
+    else:
+        button_label = "Check Simulated Future Slot Availability"
+
+    simulate_booking = st.button(button_label)
 
     if simulate_booking:
 
@@ -1096,11 +1167,11 @@ elif page == "Reservation Simulation":
             )
         elif slot_status == "Limited Availability":
             st.warning(
-                "This simulated slot may have limited availability. Consider choosing a different time or allowing extra wait time."
+                "This simulated slot may have limited availability. Consider allowing extra wait time or checking another nearby station."
             )
         else:
             st.error(
-                "This simulated slot has high booking risk. Consider selecting an off-peak time or another station."
+                "This simulated slot has high booking risk. Consider another station or a lower-demand time."
             )
 
         # -----------------------------
@@ -1113,9 +1184,11 @@ elif page == "Reservation Simulation":
 
         reservation_summary = f"""
 Reservation Type: Simulated EV Charging Slot
+Booking Mode: {booking_mode}
 Booking Code: EV-{booking_code}
 
 Station: {selected_station_display}
+State / Territory: {selected_state}
 Vehicle: {selected_ev}
 Driver: {driver_name if driver_name.strip() != "" else "Not provided"}
 Vehicle Plate / Reference: {vehicle_plate if vehicle_plate.strip() != "" else "Not provided"}
