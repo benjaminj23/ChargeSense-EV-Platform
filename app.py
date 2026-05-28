@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 import plotly.express as px
-import streamlit as st
+import streamlit as st 
 
 st.set_page_config(page_title="ChargeSense", layout="wide")
 from chargesense_crazy_ui import inject_crazy_ui, render_crazy_home_hero
