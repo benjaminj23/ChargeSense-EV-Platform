@@ -50,7 +50,7 @@ def inject_crazy_ui():
             position: relative;
             z-index: 1;
             max-width: 1480px;
-            padding-top: 1.3rem;
+            padding-top: 4.25rem;
             padding-bottom: 4rem;
         }
 
@@ -90,6 +90,11 @@ def inject_crazy_ui():
             color: #f7fbff !important;
         }
 
+        [data-testid="stSidebar"] [data-testid="stWidgetLabel"],
+        [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
+            color: #f7fbff !important;
+        }
+
         [data-testid="stSidebar"] [role="radiogroup"] label,
         [data-testid="stSidebar"] .stSelectbox,
         [data-testid="stSidebar"] .stRadio {
@@ -106,6 +111,8 @@ def inject_crazy_ui():
             font-weight: 900 !important;
             color: var(--cs-text) !important;
             text-shadow: none;
+            margin-top: 0 !important;
+            margin-bottom: 1.2rem !important;
         }
 
         h2 {
@@ -120,6 +127,20 @@ def inject_crazy_ui():
 
         p, li, label, span, div {
             color: inherit;
+        }
+
+        .stApp label,
+        .stApp [data-testid="stWidgetLabel"],
+        .stApp [data-testid="stWidgetLabel"] p {
+            color: var(--cs-text) !important;
+            font-weight: 700;
+        }
+
+        .stApp small,
+        .stApp .caption,
+        .stApp [data-testid="stCaptionContainer"],
+        .stApp [data-testid="stCaptionContainer"] p {
+            color: var(--cs-muted) !important;
         }
 
         .cs-hero {
@@ -338,6 +359,7 @@ def inject_crazy_ui():
             .block-container {
                 padding-left: 1rem;
                 padding-right: 1rem;
+                padding-top: 3.5rem;
             }
 
             .cs-hero {
