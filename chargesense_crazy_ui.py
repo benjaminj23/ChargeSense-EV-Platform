@@ -278,12 +278,13 @@ def inject_crazy_ui():
         [data-testid="stMetric"] {
             position: relative;
             min-height: 118px;
+            height: auto !important;
             padding: 18px 16px 16px 16px;
             border-radius: 8px;
             border: 1px solid var(--cs-line);
             background: var(--cs-panel-strong);
             box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
-            overflow: hidden;
+            overflow: visible;
         }
 
         [data-testid="stMetric"]::before {
@@ -306,7 +307,7 @@ def inject_crazy_ui():
 
         [data-testid="stMetricValue"] {
             color: var(--cs-text) !important;
-            font-size: clamp(1.3rem, 1.75vw, 2rem) !important;
+            font-size: clamp(1.05rem, 1.45vw, 1.65rem) !important;
             line-height: 1.12 !important;
             font-weight: 850 !important;
             text-shadow: none;
@@ -322,6 +323,19 @@ def inject_crazy_ui():
             overflow: visible !important;
             text-overflow: clip !important;
             word-break: normal !important;
+            overflow-wrap: anywhere !important;
+            max-width: none !important;
+            width: auto !important;
+        }
+
+        [data-testid="stMetric"] * {
+            text-overflow: clip !important;
+        }
+
+        [data-testid="stMetric"] [title] {
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
             overflow-wrap: anywhere !important;
         }
 
