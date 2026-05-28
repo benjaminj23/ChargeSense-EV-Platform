@@ -176,6 +176,18 @@ ocm_df["state_clean"] = (
     .str.strip()
 )
 
+messy_state_labels = [
+    "",
+    "nan",
+    "None",
+    "Unknown",
+    "Other",
+    "Other/Needs Review",
+    "Other / Needs Review",
+    "Needs Review",
+    "Other - Needs Review"
+]
+
 ocm_df["state_from_coordinates"] = ocm_df.apply(
     lambda row: infer_state_from_coordinates(
         row["latitude"],
@@ -186,20 +198,14 @@ ocm_df["state_from_coordinates"] = ocm_df.apply(
 
 ocm_df["state_clean"] = ocm_df.apply(
     lambda row: row["state_from_coordinates"]
-    if str(row["state_clean"]).strip() in [
-        "",
-        "nan",
-        "None",
-        "Unknown",
-        "Other",
-        "Other / Needs Review",
-        "Needs Review"
-    ]
+    if (
+        str(row["state_clean"]).strip() in messy_state_labels
+        and row["state_from_coordinates"] != "Other / Needs Review"
+    )
     else row["state_clean"],
     axis=1
 )
 
-# Standardise state abbreviations if they appear
 state_name_map = {
     "NSW": "New South Wales",
     "VIC": "Victoria",
@@ -215,6 +221,21 @@ ocm_df["state_clean"] = (
     ocm_df["state_clean"]
     .replace(state_name_map)
 )
+
+valid_states = [
+    "New South Wales",
+    "Victoria",
+    "Queensland",
+    "Western Australia",
+    "South Australia",
+    "Tasmania",
+    "Australian Capital Territory",
+    "Northern Territory"
+]
+
+ocm_df = ocm_df[
+    ocm_df["state_clean"].isin(valid_states)
+].copy()
 
 
 # -----------------------------
@@ -338,7 +359,6 @@ state_metrics = (
     .reset_index()
 )
 
-# Remove invalid or leftover non-state groups
 state_metrics = state_metrics[
     state_metrics["state_clean"].isin(state_population.keys())
 ].copy()
@@ -429,7 +449,6 @@ state_metrics["investment_priority_label"] = (
     state_metrics["investment_priority_score"]
     .apply(investment_priority_label)
 )
-
 
 # -----------------------------
 # SIDEBAR
