@@ -8,16 +8,16 @@ def inject_crazy_ui():
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
 
         :root {
-            --cs-bg: #060711;
-            --cs-panel: rgba(13, 18, 35, 0.76);
-            --cs-panel-strong: rgba(19, 25, 50, 0.9);
-            --cs-text: #f7fbff;
-            --cs-muted: #aab8d3;
-            --cs-cyan: #00e5ff;
-            --cs-lime: #b6ff4d;
-            --cs-pink: #ff3df2;
-            --cs-amber: #ffcf33;
-            --cs-red: #ff4778;
+            --cs-bg: #f5fbff;
+            --cs-panel: rgba(255, 255, 255, 0.86);
+            --cs-panel-strong: rgba(255, 255, 255, 0.96);
+            --cs-text: #102033;
+            --cs-muted: #526477;
+            --cs-primary: #087ea4;
+            --cs-primary-soft: #dff5fb;
+            --cs-accent: #2fb37c;
+            --cs-line: #c9e3ee;
+            --cs-warning: #f2a93b;
         }
 
         html, body, [class*="css"] {
@@ -27,10 +27,8 @@ def inject_crazy_ui():
         .stApp {
             color: var(--cs-text);
             background:
-                radial-gradient(circle at 12% 10%, rgba(0, 229, 255, 0.24), transparent 25rem),
-                radial-gradient(circle at 86% 6%, rgba(255, 61, 242, 0.2), transparent 26rem),
-                radial-gradient(circle at 70% 85%, rgba(182, 255, 77, 0.14), transparent 25rem),
-                linear-gradient(135deg, #060711 0%, #091323 42%, #12081e 100%);
+                linear-gradient(180deg, rgba(223, 245, 251, 0.7), rgba(245, 251, 255, 0.96) 32%),
+                var(--cs-bg);
             overflow-x: hidden;
         }
 
@@ -39,12 +37,12 @@ def inject_crazy_ui():
             position: fixed;
             inset: 0;
             pointer-events: none;
-            opacity: 0.24;
+            opacity: 0.22;
             background-image:
-                linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+                linear-gradient(rgba(8, 126, 164, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(8, 126, 164, 0.1) 1px, transparent 1px);
             background-size: 42px 42px;
-            mask-image: linear-gradient(to bottom, black, transparent 82%);
+            mask-image: linear-gradient(to bottom, black, transparent 72%);
             z-index: 0;
         }
 
@@ -58,17 +56,16 @@ def inject_crazy_ui():
 
         [data-testid="stSidebar"] {
             background:
-                linear-gradient(180deg, rgba(9, 16, 33, 0.98), rgba(17, 8, 31, 0.98)),
-                radial-gradient(circle at top, rgba(0, 229, 255, 0.18), transparent 22rem);
-            border-right: 1px solid rgba(0, 229, 255, 0.24);
-            box-shadow: 18px 0 55px rgba(0, 0, 0, 0.32);
+                linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(232, 247, 252, 0.98));
+            border-right: 1px solid var(--cs-line);
+            box-shadow: 10px 0 34px rgba(8, 65, 92, 0.08);
         }
 
         [data-testid="stSidebar"] h1,
         [data-testid="stSidebar"] h2,
         [data-testid="stSidebar"] h3,
         [data-testid="stSidebar"] label {
-            color: #f7fbff !important;
+            color: var(--cs-text) !important;
         }
 
         [data-testid="stSidebar"] [role="radiogroup"] label,
@@ -82,22 +79,20 @@ def inject_crazy_ui():
         }
 
         h1 {
-            font-size: clamp(2.4rem, 5vw, 5rem) !important;
-            line-height: 0.95 !important;
+            font-size: clamp(2.2rem, 4vw, 4rem) !important;
+            line-height: 1.05 !important;
             font-weight: 900 !important;
-            color: #ffffff !important;
-            text-shadow:
-                0 0 18px rgba(0, 229, 255, 0.42),
-                0 0 44px rgba(255, 61, 242, 0.24);
+            color: var(--cs-text) !important;
+            text-shadow: none;
         }
 
         h2 {
-            color: #eaf7ff !important;
+            color: var(--cs-text) !important;
             font-weight: 850 !important;
         }
 
         h3 {
-            color: #dff9ff !important;
+            color: var(--cs-text) !important;
             font-weight: 800 !important;
         }
 
@@ -107,17 +102,14 @@ def inject_crazy_ui():
 
         .cs-hero {
             position: relative;
-            min-height: 260px;
-            padding: 34px;
+            min-height: 220px;
+            padding: 32px;
             margin: 0 0 24px 0;
-            border: 1px solid rgba(255, 255, 255, 0.16);
+            border: 1px solid var(--cs-line);
             border-radius: 8px;
             background:
-                linear-gradient(135deg, rgba(0, 229, 255, 0.18), rgba(255, 61, 242, 0.13) 52%, rgba(182, 255, 77, 0.12)),
-                rgba(6, 9, 20, 0.68);
-            box-shadow:
-                0 24px 80px rgba(0, 0, 0, 0.34),
-                inset 0 0 60px rgba(255, 255, 255, 0.04);
+                linear-gradient(135deg, rgba(223, 245, 251, 0.92), rgba(255, 255, 255, 0.98));
+            box-shadow: 0 18px 45px rgba(8, 65, 92, 0.12);
             overflow: hidden;
         }
 
@@ -130,11 +122,11 @@ def inject_crazy_ui():
                     115deg,
                     transparent 0,
                     transparent 18px,
-                    rgba(255, 255, 255, 0.08) 19px,
+                    rgba(8, 126, 164, 0.08) 19px,
                     transparent 21px
                 );
             animation: cs-scan 8s linear infinite;
-            opacity: 0.22;
+            opacity: 0.16;
         }
 
         .cs-hero-inner {
@@ -150,8 +142,8 @@ def inject_crazy_ui():
             padding: 8px 11px;
             border: 1px solid rgba(182, 255, 77, 0.55);
             border-radius: 999px;
-            color: var(--cs-lime);
-            background: rgba(182, 255, 77, 0.08);
+            color: var(--cs-primary);
+            background: var(--cs-primary-soft);
             font-weight: 800;
             font-size: 0.76rem;
             text-transform: uppercase;
@@ -159,19 +151,17 @@ def inject_crazy_ui():
 
         .cs-hero-title {
             margin-top: 20px;
-            font-size: clamp(3rem, 7vw, 6.6rem);
-            line-height: 0.86;
+            font-size: clamp(2.8rem, 6vw, 5.6rem);
+            line-height: 0.95;
             font-weight: 950;
-            color: white;
-            text-shadow:
-                0 0 22px rgba(0, 229, 255, 0.55),
-                0 0 60px rgba(255, 61, 242, 0.34);
+            color: var(--cs-text);
+            text-shadow: none;
         }
 
         .cs-hero-copy {
             max-width: 760px;
             margin-top: 18px;
-            color: #d8e7ff;
+            color: var(--cs-muted);
             font-size: 1.08rem;
             line-height: 1.65;
         }
@@ -186,25 +176,21 @@ def inject_crazy_ui():
         .cs-chip {
             padding: 9px 12px;
             border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            background: rgba(255, 255, 255, 0.08);
-            color: #f7fbff;
+            border: 1px solid var(--cs-line);
+            background: rgba(255, 255, 255, 0.72);
+            color: var(--cs-primary);
             font-weight: 750;
-            box-shadow: 0 0 24px rgba(0, 229, 255, 0.08);
+            box-shadow: none;
         }
 
         [data-testid="stMetric"] {
             position: relative;
-            min-height: 128px;
-            padding: 18px 18px 16px 18px;
+            min-height: 118px;
+            padding: 18px 16px 16px 16px;
             border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            background:
-                linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.035)),
-                rgba(8, 12, 25, 0.82);
-            box-shadow:
-                0 18px 46px rgba(0, 0, 0, 0.28),
-                inset 0 0 38px rgba(0, 229, 255, 0.04);
+            border: 1px solid var(--cs-line);
+            background: var(--cs-panel-strong);
+            box-shadow: 0 14px 36px rgba(8, 65, 92, 0.1);
             overflow: hidden;
         }
 
@@ -215,8 +201,8 @@ def inject_crazy_ui():
             top: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(90deg, var(--cs-cyan), var(--cs-pink), var(--cs-lime));
-            box-shadow: 0 0 22px rgba(0, 229, 255, 0.65);
+            background: linear-gradient(90deg, var(--cs-primary), var(--cs-accent));
+            box-shadow: none;
         }
 
         [data-testid="stMetricLabel"] p {
@@ -227,9 +213,28 @@ def inject_crazy_ui():
         }
 
         [data-testid="stMetricValue"] {
-            color: #ffffff !important;
-            font-weight: 900 !important;
-            text-shadow: 0 0 18px rgba(0, 229, 255, 0.28);
+            color: var(--cs-text) !important;
+            font-size: clamp(1.3rem, 1.75vw, 2rem) !important;
+            line-height: 1.12 !important;
+            font-weight: 850 !important;
+            text-shadow: none;
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            word-break: normal !important;
+            overflow-wrap: anywhere !important;
+        }
+
+        [data-testid="stMetricValue"] div {
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            word-break: normal !important;
+            overflow-wrap: anywhere !important;
+        }
+
+        [data-testid="stMetricDelta"] {
+            white-space: normal !important;
         }
 
         div[data-testid="stDataFrame"],
@@ -238,9 +243,9 @@ def inject_crazy_ui():
         [data-testid="stExpander"],
         .stAlert {
             border-radius: 8px !important;
-            border: 1px solid rgba(255, 255, 255, 0.14) !important;
-            background: rgba(9, 14, 29, 0.74) !important;
-            box-shadow: 0 18px 55px rgba(0, 0, 0, 0.24);
+            border: 1px solid var(--cs-line) !important;
+            background: rgba(255, 255, 255, 0.82) !important;
+            box-shadow: 0 14px 36px rgba(8, 65, 92, 0.09);
             overflow: hidden;
         }
 
@@ -248,14 +253,12 @@ def inject_crazy_ui():
         .stDownloadButton > button,
         a[data-testid="stLinkButton"] {
             min-height: 44px;
-            border: 1px solid rgba(0, 229, 255, 0.62) !important;
+            border: 1px solid var(--cs-primary) !important;
             border-radius: 8px !important;
-            color: #031018 !important;
-            background: linear-gradient(90deg, var(--cs-cyan), var(--cs-lime)) !important;
+            color: #ffffff !important;
+            background: var(--cs-primary) !important;
             font-weight: 900 !important;
-            box-shadow:
-                0 0 24px rgba(0, 229, 255, 0.26),
-                0 14px 34px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 24px rgba(8, 126, 164, 0.2);
             transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
         }
 
@@ -263,10 +266,8 @@ def inject_crazy_ui():
         .stDownloadButton > button:hover,
         a[data-testid="stLinkButton"]:hover {
             transform: translateY(-1px);
-            filter: saturate(1.25);
-            box-shadow:
-                0 0 32px rgba(0, 229, 255, 0.42),
-                0 18px 42px rgba(0, 0, 0, 0.36);
+            filter: brightness(0.96);
+            box-shadow: 0 14px 30px rgba(8, 126, 164, 0.25);
         }
 
         .stSelectbox div[data-baseweb="select"] > div,
@@ -276,34 +277,34 @@ def inject_crazy_ui():
         .stDateInput input,
         .stTimeInput input {
             border-radius: 8px !important;
-            border: 1px solid rgba(0, 229, 255, 0.26) !important;
-            background: rgba(5, 9, 20, 0.72) !important;
-            color: #ffffff !important;
-            box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.05);
+            border: 1px solid var(--cs-line) !important;
+            background: rgba(255, 255, 255, 0.92) !important;
+            color: var(--cs-text) !important;
+            box-shadow: none;
         }
 
         .stSlider [data-baseweb="slider"] > div {
-            color: var(--cs-cyan);
+            color: var(--cs-primary);
         }
 
         [data-testid="stMarkdownContainer"] code {
             border-radius: 8px;
-            color: #b6ff4d;
-            background: rgba(182, 255, 77, 0.1);
-            border: 1px solid rgba(182, 255, 77, 0.18);
+            color: var(--cs-primary);
+            background: var(--cs-primary-soft);
+            border: 1px solid var(--cs-line);
         }
 
         pre {
             border-radius: 8px !important;
-            border: 1px solid rgba(0, 229, 255, 0.18) !important;
-            background: rgba(4, 8, 18, 0.92) !important;
-            box-shadow: inset 0 0 40px rgba(0, 229, 255, 0.05);
+            border: 1px solid var(--cs-line) !important;
+            background: rgba(255, 255, 255, 0.94) !important;
+            box-shadow: none;
         }
 
         hr {
             border: 0;
             height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.9), rgba(255, 61, 242, 0.7), transparent);
+            background: linear-gradient(90deg, transparent, var(--cs-line), transparent);
         }
 
         @keyframes cs-scan {
@@ -323,7 +324,7 @@ def inject_crazy_ui():
             }
 
             .cs-hero-title {
-                font-size: 3.2rem;
+                font-size: 3rem;
             }
         }
         </style>
@@ -355,3 +356,11 @@ def render_crazy_home_hero():
         """,
         unsafe_allow_html=True,
     )
+
+
+def inject_chargesense_ui():
+    inject_crazy_ui()
+
+
+def render_chargesense_home_hero():
+    render_crazy_home_hero()
