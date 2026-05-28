@@ -8,7 +8,7 @@ def inject_crazy_ui():
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
 
         :root {
-            --cs-bg: #dce9f2;
+            --cs-bg: #b9cfdd;
             --cs-panel: rgba(245, 250, 253, 0.9);
             --cs-panel-strong: rgba(250, 253, 255, 0.96);
             --cs-text: #102033;
@@ -16,7 +16,7 @@ def inject_crazy_ui():
             --cs-primary: #08779b;
             --cs-primary-soft: #d6eef6;
             --cs-accent: #2fb37c;
-            --cs-line: #b8d0dc;
+            --cs-line: #9fb9c8;
             --cs-warning: #f2a93b;
         }
 
@@ -27,7 +27,7 @@ def inject_crazy_ui():
         .stApp {
             color: var(--cs-text);
             background:
-                linear-gradient(180deg, rgba(190, 215, 229, 0.96), rgba(220, 233, 242, 0.98) 34%, rgba(204, 221, 232, 0.98)),
+                linear-gradient(180deg, rgba(148, 180, 199, 0.98), rgba(185, 207, 221, 0.98) 34%, rgba(166, 193, 209, 0.98)),
                 var(--cs-bg);
             overflow-x: hidden;
         }
