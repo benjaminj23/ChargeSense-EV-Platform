@@ -2,7 +2,7 @@
 # © 2026 Benjamin Joseph. All rights reserved.
 # This code is for portfolio and  demonstration purposes only.
 import random 
-import math 
+import math  
 import requests 
 import numpy as np
 from datetime import datetime, timedelta
