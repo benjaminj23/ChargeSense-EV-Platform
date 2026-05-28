@@ -12,7 +12,9 @@ import plotly.express as px
 import streamlit as st
 
 st.set_page_config(page_title="ChargeSense", layout="wide")
+from chargesense_crazy_ui import inject_crazy_ui, render_crazy_home_hero
 
+inject_crazy_ui()
 
 @st.cache_data
 def load_data():
@@ -268,7 +270,7 @@ else:
 
 if page == "Home":
 
-    st.title("⚡ ChargeSense")
+    render_crazy_home_hero()
 
     st.subheader("EV Infrastructure Intelligence & Route Planning Platform")
 
