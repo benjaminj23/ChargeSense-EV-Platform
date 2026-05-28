@@ -99,7 +99,7 @@ def infer_state_from_coordinates(lat, lon):
         }
     }
 
-    # ACT must be checked before NSW because it sits inside the NSW bounding area.
+    # ACT must be checked before NSW because ACT sits inside the NSW bounding area.
     ordered_states = [
         "Australian Capital Territory",
         "New South Wales",
@@ -176,36 +176,6 @@ ocm_df["state_clean"] = (
     .str.strip()
 )
 
-messy_state_labels = [
-    "",
-    "nan",
-    "None",
-    "Unknown",
-    "Other",
-    "Other/Needs Review",
-    "Other / Needs Review",
-    "Needs Review",
-    "Other - Needs Review"
-]
-
-ocm_df["state_from_coordinates"] = ocm_df.apply(
-    lambda row: infer_state_from_coordinates(
-        row["latitude"],
-        row["longitude"]
-    ),
-    axis=1
-)
-
-ocm_df["state_clean"] = ocm_df.apply(
-    lambda row: row["state_from_coordinates"]
-    if (
-        str(row["state_clean"]).strip() in messy_state_labels
-        and row["state_from_coordinates"] != "Other / Needs Review"
-    )
-    else row["state_clean"],
-    axis=1
-)
-
 state_name_map = {
     "NSW": "New South Wales",
     "VIC": "Victoria",
@@ -233,6 +203,24 @@ valid_states = [
     "Northern Territory"
 ]
 
+ocm_df["state_from_coordinates"] = ocm_df.apply(
+    lambda row: infer_state_from_coordinates(
+        row["latitude"],
+        row["longitude"]
+    ),
+    axis=1
+)
+
+# Coordinate-based state is treated as the source of truth where available.
+# This fixes records where metadata says NSW but the point is physically in Victoria, etc.
+ocm_df["state_clean"] = ocm_df.apply(
+    lambda row: row["state_from_coordinates"]
+    if row["state_from_coordinates"] in valid_states
+    else row["state_clean"],
+    axis=1
+)
+
+# Remove anything still not assigned to a valid Australian state/territory
 ocm_df = ocm_df[
     ocm_df["state_clean"].isin(valid_states)
 ].copy()
@@ -449,6 +437,8 @@ state_metrics["investment_priority_label"] = (
     state_metrics["investment_priority_score"]
     .apply(investment_priority_label)
 )
+
+
 
 # -----------------------------
 # SIDEBAR
