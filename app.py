@@ -25,10 +25,10 @@ def load_data():
 
 nsw_df, ocm_df, ev_market_df = load_data()
 
-
 # -----------------------------
 # DATA PREP
 # -----------------------------
+
 city_coordinates = {
     "Sydney": [151.2093, -33.8688],
     "Melbourne": [144.9631, -37.8136],
@@ -99,6 +99,7 @@ def infer_state_from_coordinates(lat, lon):
         }
     }
 
+    # ACT must be checked before NSW because it sits inside the NSW bounding area.
     ordered_states = [
         "Australian Capital Territory",
         "New South Wales",
@@ -124,6 +125,10 @@ def infer_state_from_coordinates(lat, lon):
     return "Other / Needs Review"
 
 
+# -----------------------------
+# Numeric cleanup
+# -----------------------------
+
 ocm_df["max_power_kw"] = pd.to_numeric(
     ocm_df["max_power_kw"],
     errors="coerce"
@@ -143,6 +148,22 @@ ocm_df["date_last_verified"] = pd.to_datetime(
     ocm_df["date_last_verified"],
     errors="coerce"
 )
+
+
+# -----------------------------
+# Keep only Australian charger records
+# -----------------------------
+# This removes accidental overseas records such as UK/Europe points.
+
+ocm_df["is_in_australia"] = (
+    ocm_df["latitude"].between(-44.5, -9.0)
+    & ocm_df["longitude"].between(112.0, 154.5)
+)
+
+ocm_df = ocm_df[
+    ocm_df["is_in_australia"]
+].copy()
+
 
 # -----------------------------
 # Clean / infer state labels
@@ -178,7 +199,7 @@ ocm_df["state_clean"] = ocm_df.apply(
     axis=1
 )
 
-# Optional: standardise abbreviations if any appear
+# Standardise state abbreviations if they appear
 state_name_map = {
     "NSW": "New South Wales",
     "VIC": "Victoria",
@@ -195,6 +216,11 @@ ocm_df["state_clean"] = (
     .replace(state_name_map)
 )
 
+
+# -----------------------------
+# Reliability scoring
+# -----------------------------
+
 latest_date = ocm_df["date_last_verified"].max()
 
 ocm_df["days_since_verified"] = (
@@ -205,7 +231,14 @@ ocm_df["is_recently_verified"] = (
     ocm_df["is_recently_verified"]
     .astype(str)
     .str.lower()
-    .map({"true": 1, "false": 0, "1": 1, "0": 0})
+    .map(
+        {
+            "true": 1,
+            "false": 0,
+            "1": 1,
+            "0": 0
+        }
+    )
     .fillna(0)
 )
 
@@ -275,6 +308,11 @@ ocm_df["reliability_label"] = (
     .apply(reliability_label)
 )
 
+
+# -----------------------------
+# State-level population and infrastructure metrics
+# -----------------------------
+
 state_population = {
     "New South Wales": 8500000,
     "Victoria": 6900000,
@@ -300,8 +338,14 @@ state_metrics = (
     .reset_index()
 )
 
+# Remove invalid or leftover non-state groups
+state_metrics = state_metrics[
+    state_metrics["state_clean"].isin(state_population.keys())
+].copy()
+
 state_metrics["chargers_per_million"] = (
-    state_metrics["total_stations"] / state_metrics["population"]
+    state_metrics["total_stations"]
+    / state_metrics["population"]
 ) * 1_000_000
 
 state_metrics["chargers_per_million"] = (
@@ -311,7 +355,8 @@ state_metrics["chargers_per_million"] = (
 )
 
 state_metrics["ultra_fast_ratio"] = (
-    state_metrics["ultra_fast_sites"] / state_metrics["total_stations"]
+    state_metrics["ultra_fast_sites"]
+    / state_metrics["total_stations"]
 )
 
 state_metrics["ultra_fast_ratio"] = (
@@ -331,6 +376,11 @@ state_metrics["infrastructure_gap_score"] = (
     .clip(lower=0, upper=100)
     .round(2)
 )
+
+
+# -----------------------------
+# EV market and investment priority metrics
+# -----------------------------
 
 state_metrics = state_metrics.merge(
     ev_market_df,
@@ -379,7 +429,6 @@ state_metrics["investment_priority_label"] = (
     state_metrics["investment_priority_score"]
     .apply(investment_priority_label)
 )
-
 
 
 # -----------------------------
