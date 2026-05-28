@@ -8,15 +8,15 @@ def inject_crazy_ui():
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
 
         :root {
-            --cs-bg: #f5fbff;
-            --cs-panel: rgba(255, 255, 255, 0.86);
-            --cs-panel-strong: rgba(255, 255, 255, 0.96);
+            --cs-bg: #dce9f2;
+            --cs-panel: rgba(245, 250, 253, 0.9);
+            --cs-panel-strong: rgba(250, 253, 255, 0.96);
             --cs-text: #102033;
-            --cs-muted: #526477;
-            --cs-primary: #087ea4;
-            --cs-primary-soft: #dff5fb;
+            --cs-muted: #536879;
+            --cs-primary: #08779b;
+            --cs-primary-soft: #d6eef6;
             --cs-accent: #2fb37c;
-            --cs-line: #c9e3ee;
+            --cs-line: #b8d0dc;
             --cs-warning: #f2a93b;
         }
 
@@ -27,7 +27,7 @@ def inject_crazy_ui():
         .stApp {
             color: var(--cs-text);
             background:
-                linear-gradient(180deg, rgba(223, 245, 251, 0.7), rgba(245, 251, 255, 0.96) 32%),
+                linear-gradient(180deg, rgba(190, 215, 229, 0.96), rgba(220, 233, 242, 0.98) 34%, rgba(204, 221, 232, 0.98)),
                 var(--cs-bg);
             overflow-x: hidden;
         }
@@ -130,8 +130,8 @@ def inject_crazy_ui():
             border: 1px solid var(--cs-line);
             border-radius: 8px;
             background:
-                linear-gradient(135deg, rgba(223, 245, 251, 0.92), rgba(255, 255, 255, 0.98));
-            box-shadow: 0 18px 45px rgba(8, 65, 92, 0.12);
+                linear-gradient(135deg, rgba(230, 243, 249, 0.96), rgba(248, 252, 254, 0.98));
+            box-shadow: 0 18px 45px rgba(8, 65, 92, 0.16);
             overflow: hidden;
         }
 
@@ -199,7 +199,7 @@ def inject_crazy_ui():
             padding: 9px 12px;
             border-radius: 999px;
             border: 1px solid var(--cs-line);
-            background: rgba(255, 255, 255, 0.72);
+            background: rgba(248, 252, 254, 0.82);
             color: var(--cs-primary);
             font-weight: 750;
             box-shadow: none;
@@ -212,7 +212,7 @@ def inject_crazy_ui():
             border-radius: 8px;
             border: 1px solid var(--cs-line);
             background: var(--cs-panel-strong);
-            box-shadow: 0 14px 36px rgba(8, 65, 92, 0.1);
+            box-shadow: 0 14px 36px rgba(8, 65, 92, 0.14);
             overflow: hidden;
         }
 
@@ -266,8 +266,8 @@ def inject_crazy_ui():
         .stAlert {
             border-radius: 8px !important;
             border: 1px solid var(--cs-line) !important;
-            background: rgba(255, 255, 255, 0.82) !important;
-            box-shadow: 0 14px 36px rgba(8, 65, 92, 0.09);
+            background: rgba(248, 252, 254, 0.9) !important;
+            box-shadow: 0 14px 36px rgba(8, 65, 92, 0.12);
             overflow: hidden;
         }
 
@@ -300,7 +300,7 @@ def inject_crazy_ui():
         .stTimeInput input {
             border-radius: 8px !important;
             border: 1px solid var(--cs-line) !important;
-            background: rgba(255, 255, 255, 0.92) !important;
+            background: rgba(250, 253, 255, 0.96) !important;
             color: var(--cs-text) !important;
             box-shadow: none;
         }
@@ -319,7 +319,7 @@ def inject_crazy_ui():
         pre {
             border-radius: 8px !important;
             border: 1px solid var(--cs-line) !important;
-            background: rgba(255, 255, 255, 0.94) !important;
+            background: rgba(250, 253, 255, 0.96) !important;
             box-shadow: none;
         }
 
