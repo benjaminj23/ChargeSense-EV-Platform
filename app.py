@@ -757,65 +757,222 @@ elif page == "Infrastructure Gap Analysis":
 # -----------------------------
 
 elif page == "Interactive Map":
+
     st.title("🗺️ Interactive Charger Map")
 
-    st.markdown("Explore EV charging stations across Australia using OpenChargeMap data.")
+    st.markdown(
+        "Explore EV charging stations across Australia using OpenChargeMap data."
+    )
+
+    # -----------------------------
+    # Prepare map data
+    # -----------------------------
+
+    map_df = ocm_df.copy()
+
+    map_df["latitude"] = pd.to_numeric(
+        map_df["latitude"],
+        errors="coerce"
+    )
+
+    map_df["longitude"] = pd.to_numeric(
+        map_df["longitude"],
+        errors="coerce"
+    )
+
+    map_df["max_power_kw"] = pd.to_numeric(
+        map_df["max_power_kw"],
+        errors="coerce"
+    ).fillna(0)
+
+    map_df["station_name"] = map_df["station_name"].fillna("Unknown Station")
+    map_df["town"] = map_df["town"].fillna("")
+    map_df["state_clean"] = map_df["state_clean"].fillna("Unknown")
+
+    map_df = map_df.dropna(
+        subset=[
+            "latitude",
+            "longitude"
+        ]
+    )
+
+    # Keep only official Australian states/territories
+    valid_states = [
+        "New South Wales",
+        "Victoria",
+        "Queensland",
+        "Western Australia",
+        "South Australia",
+        "Tasmania",
+        "Australian Capital Territory",
+        "Northern Territory"
+    ]
+
+    map_df = map_df[
+        map_df["state_clean"].isin(valid_states)
+    ].copy()
+
+    # -----------------------------
+    # State-specific map view settings
+    # -----------------------------
+
+    state_map_view = {
+        "New South Wales": {
+            "lat": -32.8,
+            "lon": 147.0,
+            "zoom": 5.0
+        },
+        "Victoria": {
+            "lat": -37.0,
+            "lon": 144.5,
+            "zoom": 5.5
+        },
+        "Queensland": {
+            "lat": -22.5,
+            "lon": 144.5,
+            "zoom": 4.3
+        },
+        "Western Australia": {
+            "lat": -25.5,
+            "lon": 122.0,
+            "zoom": 4.0
+        },
+        "South Australia": {
+            "lat": -30.0,
+            "lon": 135.0,
+            "zoom": 4.6
+        },
+        "Tasmania": {
+            "lat": -42.0,
+            "lon": 147.0,
+            "zoom": 6.2
+        },
+        "Australian Capital Territory": {
+            "lat": -35.3,
+            "lon": 149.1,
+            "zoom": 8.2
+        },
+        "Northern Territory": {
+            "lat": -19.5,
+            "lon": 133.5,
+            "zoom": 4.8
+        }
+    }
+
+    # -----------------------------
+    # Filters
+    # -----------------------------
 
     col1, col2 = st.columns(2)
 
     with col1:
         selected_state = st.selectbox(
-            "Select State", sorted(ocm_df["state_clean"].dropna().unique())
+            "Select State",
+            sorted(map_df["state_clean"].dropna().unique())
         )
 
     with col2:
-        max_power_available = int(ocm_df["max_power_kw"].fillna(0).max())
-        min_power = st.slider("Minimum Charger Power (kW)", 0, max_power_available, 0)
+        min_power_kw = st.slider(
+            "Minimum Charger Power (kW)",
+            0,
+            350,
+            0,
+            10
+        )
 
-    map_df = ocm_df[
-        (ocm_df["state_clean"] == selected_state)
-        & (ocm_df["max_power_kw"].fillna(0) >= min_power)
+    filtered_map_df = map_df[
+        (map_df["state_clean"] == selected_state)
+        & (map_df["max_power_kw"] >= min_power_kw)
     ].copy()
 
-    map_df["latitude"] = pd.to_numeric(map_df["latitude"], errors="coerce")
-    map_df["longitude"] = pd.to_numeric(map_df["longitude"], errors="coerce")
-    map_df = map_df.dropna(subset=["latitude", "longitude"])
+    st.markdown(
+        f"Showing **{len(filtered_map_df)}** charging stations"
+    )
 
-    map_df["plot_size"] = map_df["max_power_kw"].fillna(1).clip(lower=5, upper=350)
-
-    st.write(f"Showing {len(map_df)} charging stations")
-
-    if len(map_df) == 0:
-        st.warning("No stations match the selected filters.")
-    else:
-        fig = px.scatter_mapbox(
-            map_df,
-            lat="latitude",
-            lon="longitude",
-            hover_name="station_name",
-            hover_data={
-                "state_clean": True,
-                "max_power_kw": True,
-                "speed_category": True,
-                "reliability_score": True,
-                "reliability_label": True,
-                "latitude": False,
-                "longitude": False,
-                "plot_size": False,
-            },
-            color="speed_category",
-            size="plot_size",
-            zoom=5,
-            height=650,
+    if len(filtered_map_df) == 0:
+        st.warning(
+            "No charging stations match the selected filters."
         )
+        st.stop()
 
-        fig.update_layout(
-            mapbox_style="open-street-map",
-            margin={"r": 0, "t": 0, "l": 0, "b": 0},
+    # -----------------------------
+    # Build map
+    # -----------------------------
+
+    selected_view = state_map_view.get(
+        selected_state,
+        {
+            "lat": -25.2744,
+            "lon": 133.7751,
+            "zoom": 3.2
+        }
+    )
+
+    fig = px.scatter_mapbox(
+        filtered_map_df,
+        lat="latitude",
+        lon="longitude",
+        hover_name="station_name",
+        hover_data=[
+            "town",
+            "state_clean",
+            "max_power_kw",
+            "speed_category",
+            "reliability_score",
+            "reliability_label"
+        ],
+        color="speed_category",
+        size="max_power_kw",
+        size_max=18,
+        zoom=selected_view["zoom"],
+        height=650
+    )
+
+    fig.update_layout(
+        mapbox_style="open-street-map",
+        mapbox=dict(
+            center=dict(
+                lat=selected_view["lat"],
+                lon=selected_view["lon"]
+            ),
+            zoom=selected_view["zoom"]
+        ),
+        margin=dict(
+            l=0,
+            r=0,
+            t=0,
+            b=0
         )
+    )
 
-        st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
 
+    # -----------------------------
+    # Optional table
+    # -----------------------------
+
+    st.subheader("Charging Stations in Selected State")
+
+    st.dataframe(
+        filtered_map_df[
+            [
+                "station_name",
+                "town",
+                "state_clean",
+                "max_power_kw",
+                "speed_category",
+                "reliability_score",
+                "reliability_label"
+            ]
+        ].sort_values(
+            "max_power_kw",
+            ascending=False
+        ),
+        use_container_width=True
+    )
 # -----------------------------
 # RELIABILITY INTELLIGENCE
 # -----------------------------
