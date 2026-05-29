@@ -1,4 +1,11 @@
-
+# ChargeSense EV Infrastructure Intelligence Platform
+# © 2026 Benjamin Joseph. All rights reserved.
+# This code is for portfolio and  demonstration purposes only.
+import random  
+import math  
+import requests  
+import numpy as np 
+from datetime import datetime, timedelta
 
 import pandas as pd
 import plotly.express as px
