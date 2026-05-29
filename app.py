@@ -11,7 +11,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st 
 
-st.set_page_config(page_title="ChargeSense", layout="wide")
+st.set_page_config(page_title="EVAtlas", layout="wide")
 from chargesense_crazy_ui import inject_crazy_ui, render_crazy_home_hero
 
 inject_crazy_ui()
@@ -444,7 +444,7 @@ state_metrics["investment_priority_label"] = (
 # SIDEBAR
 # -----------------------------
 
-st.sidebar.title("⚡ ChargeSense")
+st.sidebar.title("⚡ EVAtlas")
 
 
 app_mode = st.sidebar.radio(
@@ -504,7 +504,7 @@ if page == "Home":
     st.subheader("EV Infrastructure Intelligence & Route Planning Platform")
 
     st.markdown("""
-    ChargeSense is a prototype platform for EV route planning and  EV infrastructure intelligence in Australia.
+    EVAtlas is a prototype platform for EV route planning and  EV infrastructure intelligence in Australia.
 
     It combines public charger data, EV registration-based signals, routing APIs, demand  forecasting,
     reliability scoring, corridor risk analysis, operator benchmarking and fleet/council planning analytics.
@@ -2700,7 +2700,7 @@ elif page == "Model Assumptions":
     st.markdown("""
     ### Why this page matters
 
-    ChargeSense uses public EV infrastructure datasets and  scenario-based models.
+    EVAtlas uses public EV infrastructure datasets and  scenario-based models.
     Some outputs are analytical estimates, not confirmed real-world measurements.
 
     ### Key Assumptions
@@ -5324,7 +5324,7 @@ elif page == "Data Reality & Production Needs":
     st.title("🧾 Data Reality & Production Needs")
 
     st.markdown("""
-    ChargeSense is currently a working prototype that combines public datasets,
+    EVAtlas is currently a working prototype that combines public datasets,
     routing APIs, derived metrics, and scenario-based assumptions.
 
     This page explains what is currently based on real public data, what is estimated,
@@ -5551,7 +5551,7 @@ elif page == "Data Reality & Production Needs":
 
     This page separates the current prototype from a production-grade platform.
 
-    It shows that ChargeSense already demonstrates the workflow using public data and assumptions,
+    It shows that EVAtlas already demonstrates the workflow using public data and assumptions,
     while also identifying the specific data partnerships and integrations that could improve commercial accuracy.
 
     For mentorship and customer discovery, this helps frame the next question:
@@ -5560,7 +5560,7 @@ elif page == "Data Reality & Production Needs":
     """)
 
     st.caption(
-        "ChargeSense is currently a prototype. The goal is to test the workflow, customer problem, and data value before attempting production-level integrations."
+        "EVAtlas is currently a prototype. The goal is to test the workflow, customer problem, and data value before attempting production-level integrations."
     )
 
 elif page == "Operator Performance":
@@ -6157,7 +6157,7 @@ elif page == "Project Insights":
     **7. Charger trust is a product opportunity.**  
     Combining reliability, freshness, power and  connector availability can help drivers choose better stations.
 
-    **8. ChargeSense can evolve into a decision-support tool.**  
+    **8. EVAtlas can evolve into a decision-support tool.**  
     Future versions could support charger investment planning, congestion forecasting,
     live availability and  smart route recommendations.
     """)
