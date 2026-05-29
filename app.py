@@ -1233,7 +1233,7 @@ elif page == "Reservation Simulation":
 
     st.warning(
         "Prototype only: this does not reserve a real charging station. "
-        "A production version would require operator APIs, user accounts, payments, and live charger availability."
+        "A production version would require operator APIs, user accounts, payments and live charger availability."
     )
 
     # -----------------------------
@@ -1551,7 +1551,7 @@ elif page == "Reservation Simulation":
 
         if slot_status == "Likely Available":
             st.success(
-                "This simulated slot is likely to be available based on station reliability, demand period, and expected charging duration."
+                "This simulated slot is likely to be available based on station reliability, demand period and expected charging duration."
             )
         elif slot_status == "Limited Availability":
             st.warning(
@@ -1591,7 +1591,7 @@ Booking Confidence Score: {slot_score}/100
 
 Important Note:
 This is a simulated reservation only. It does not reserve a real charging station.
-A production version would require operator integration, live charger availability, user accounts, and payment/session control.
+A production version would require operator integration, live charger availability, user accounts and payment/session control.
 """
 
         st.code(reservation_summary)
@@ -3201,7 +3201,7 @@ elif page == "Fleet & Council Intelligence":
         **{top_demand_state['state_clean']}** shows the highest demand pressure ratio, meaning estimated future public charging demand may place stronger pressure on existing infrastructure.
 
         **Fleet/council use case:**  
-        A fleet or council could use this view to identify where charging coverage may become constrained, where additional chargers may be needed, and where reliability or ultra-fast coverage should be improved.
+        A fleet or council could use this view to identify where charging coverage may become constrained, where additional chargers may be needed and where reliability or ultra-fast coverage should be improved.
         """
     )
 
@@ -4450,7 +4450,7 @@ elif page == "Real Route Optimizer":
         )
 
     st.caption(
-        "Wait time is currently estimated from demand level, time period, simulated availability, reliability, charger speed, and amenity attractiveness. It is not live queue data."
+        "Wait time is currently estimated from demand level, time period, simulated availability, reliability, charger speed and amenity attractiveness. It is not live queue data."
     )
 
     st.subheader("Cost Settings")
@@ -4812,7 +4812,7 @@ elif page == "Real Route Optimizer":
         )
 
         st.caption(
-            "Corridor risk uses public charger data, reliability indicators, simulated availability, and route coverage. It is a planning estimate, not live operational risk."
+            "Corridor risk uses public charger data, reliability indicators, simulated availability and route coverage. It is a planning estimate, not live operational risk."
         )
 
         # -----------------------------
@@ -4822,7 +4822,7 @@ elif page == "Real Route Optimizer":
         st.subheader("Recommended Charging Stops Near Route")
 
         st.caption(
-            "Availability status, wait time, and queue pressure are estimated from public metadata and scenario assumptions. User review fields are session-based only in this prototype."
+            "Availability status, wait time and queue pressure are estimated from public metadata and scenario assumptions. User review fields are session-based only in this prototype."
         )
 
         recommended_stops["estimated_wait_time_min"] = recommended_stops.apply(
@@ -5325,7 +5325,7 @@ elif page == "Data Reality & Production Needs":
 
     st.markdown("""
     EVAtlas is currently a working prototype that combines public datasets,
-    routing APIs, derived metrics, and scenario-based assumptions.
+    routing APIs, derived metrics and scenario-based assumptions.
 
     This page explains what is currently based on real public data, what is estimated,
     and what additional data would be required to make the platform more production-ready.
@@ -5440,12 +5440,12 @@ elif page == "Data Reality & Production Needs":
             },
             {
                 "Data Needed": "Live weather and traffic",
-                "Why It Matters": "Improves range, travel time, and route risk estimates",
+                "Why It Matters": "Improves range, travel time and route risk estimates",
                 "Possible Source": "Weather APIs, Google Maps, HERE, TomTom"
             },
             {
                 "Data Needed": "POI and amenities near chargers",
-                "Why It Matters": "Confirms toilets, food, cafes, parking, safety, and opening hours",
+                "Why It Matters": "Confirms toilets, food, cafes, parking, safety and opening hours",
                 "Possible Source": "Google Places, OpenStreetMap POI data"
             },
             {
@@ -5477,7 +5477,7 @@ elif page == "Data Reality & Production Needs":
     )
 
     st.caption(
-        "This table identifies the next data layers that could improve commercial accuracy, validation, and customer value."
+        "This table identifies the next data layers that could improve commercial accuracy, validation and customer value."
     )
 
     # -----------------------------------
@@ -5491,12 +5491,12 @@ elif page == "Data Reality & Production Needs":
             {
                 "Feature": "Real Route Optimizer",
                 "Prototype Status": "Working",
-                "Production Gap": "Needs live traffic, live charger status, real pricing, and vehicle charging curves"
+                "Production Gap": "Needs live traffic, live charger status, real pricing and vehicle charging curves"
             },
             {
                 "Feature": "Corridor Risk Score",
                 "Prototype Status": "Working estimate",
-                "Production Gap": "Needs outage history, live status, queue data, and station uptime"
+                "Production Gap": "Needs outage history, live status, queue data and station uptime"
             },
             {
                 "Feature": "Demand Forecast Model",
