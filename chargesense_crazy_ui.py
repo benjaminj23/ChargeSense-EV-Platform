@@ -4,7 +4,7 @@ import streamlit as st
 def inject_evatlas_ui():
     st.markdown(
         """
-        <style>
+        <style> 
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
 
         :root {
