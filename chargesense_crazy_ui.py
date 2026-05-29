@@ -477,7 +477,7 @@ def render_crazy_home_hero():
         <section class="cs-hero">
             <div class="cs-hero-inner">
                 <div class="cs-kicker">Live EV infrastructure command deck</div>
-                <div class="cs-hero-title"><span class="cs-hero-bolt">⚡</span><span>ChargeSense</span></div>
+                <div class="cs-hero-title"><span class="cs-hero-bolt">⚡</span><span>EVAtlas</span></div>
                 <div class="cs-hero-copy">
                     Route planning, charger trust, fleet pressure, operator benchmarking, and investment intelligence
                     in one high-voltage prototype for Australia's EV charging network.
