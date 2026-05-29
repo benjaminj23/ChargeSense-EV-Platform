@@ -1226,14 +1226,14 @@ elif page == "Reservation Simulation":
     st.title("📅 Charging Slot Reservation Simulation")
 
     st.markdown("""
-    Simulate reserving an EV charging slot at a selected charging station.
+    Simulate checking EV charger slot availability and reserving a charging slot.
 
-    Users can either simulate an immediate booking using **Book Now**, or schedule a future charging slot.
+    Users can either check immediate availability using **Book Now**, or search for a future charging slot.
     """)
 
     st.warning(
         "Prototype only: this does not reserve a real charging station. "
-        "A production version would require operator APIs, user accounts, payments and live charger availability."
+        "A production version would require operator APIs, user accounts, payments, live connector availability, and payment/session control."
     )
 
     # -----------------------------
@@ -1243,7 +1243,24 @@ elif page == "Reservation Simulation":
     def generate_access_code():
         return str(random.randint(1000, 9999))
 
-    def simulate_slot_availability(station_reliability, selected_time_period, expected_duration):
+    def infer_demand_period_from_time(reservation_time, booking_mode):
+        if booking_mode == "Book Now":
+            return "Now / Immediate"
+
+        hour = reservation_time.hour
+
+        if 6 <= hour < 9:
+            return "Morning Peak"
+        elif 9 <= hour < 15:
+            return "Daytime"
+        elif 15 <= hour < 18:
+            return "Afternoon Peak"
+        elif 18 <= hour < 22:
+            return "Evening"
+        else:
+            return "Off-peak"
+
+    def simulate_slot_availability_score(station_reliability, selected_time_period, expected_duration):
         if pd.isna(station_reliability):
             station_reliability = 0
 
@@ -1274,13 +1291,61 @@ elif page == "Reservation Simulation":
         elif expected_duration <= 30:
             base_availability += 5
 
-        availability_score = max(min(base_availability, 100), 0)
+        return max(min(base_availability, 100), 0)
 
-        if availability_score >= 70:
-            return "Likely Available", availability_score
-        elif availability_score >= 40:
-            return "Limited Availability", availability_score
-        return "High Booking Risk", availability_score
+    def slot_status_from_score(score):
+        if score >= 70:
+            return "Available"
+        elif score >= 45:
+            return "Limited"
+        return "High Risk"
+
+    def build_simulated_slots(base_score, booking_mode, reservation_date, reservation_time, expected_duration_min):
+        simulated_slots = []
+
+        if booking_mode == "Book Now":
+            slot_offsets = [0, 15, 30]
+        else:
+            slot_offsets = [-30, 0, 30]
+
+        for i, offset in enumerate(slot_offsets):
+            slot_datetime = datetime.combine(
+                reservation_date,
+                reservation_time
+            ) + timedelta(minutes=offset)
+
+            slot_score = base_score
+
+            if i == 0:
+                slot_score -= 10
+            elif i == 1:
+                slot_score += 5
+            else:
+                slot_score -= 3
+
+            slot_score = max(min(slot_score, 100), 0)
+            slot_status = slot_status_from_score(slot_score)
+
+            if slot_status == "Available":
+                estimated_wait = 0 if slot_score >= 80 else 5
+            elif slot_status == "Limited":
+                estimated_wait = 10
+            else:
+                estimated_wait = 25
+
+            simulated_slots.append(
+                {
+                    "slot_option": f"Option {i + 1}",
+                    "slot_date": slot_datetime.date(),
+                    "slot_time": slot_datetime.time().replace(second=0, microsecond=0),
+                    "expected_duration_min": expected_duration_min,
+                    "slot_status": slot_status,
+                    "booking_confidence_score": round(slot_score, 1),
+                    "estimated_wait_time_min": estimated_wait
+                }
+            )
+
+        return pd.DataFrame(simulated_slots)
 
     # -----------------------------
     # Prepare station data
@@ -1314,7 +1379,7 @@ elif page == "Reservation Simulation":
     # Station selection
     # -----------------------------
 
-    st.subheader("Select Charging Station")
+    st.subheader("1. Select Charging Station")
 
     available_states = sorted(
         reservation_df["state_clean"]
@@ -1322,9 +1387,20 @@ elif page == "Reservation Simulation":
         .unique()
     )
 
+    valid_states = [
+        "New South Wales",
+        "Victoria",
+        "Queensland",
+        "Western Australia",
+        "South Australia",
+        "Tasmania",
+        "Australian Capital Territory",
+        "Northern Territory"
+    ]
+
     available_states = [
         state for state in available_states
-        if str(state).strip() != "" and str(state) != "Unknown"
+        if state in valid_states
     ]
 
     if len(available_states) == 0:
@@ -1387,7 +1463,7 @@ elif page == "Reservation Simulation":
     # Booking mode
     # -----------------------------
 
-    st.subheader("Booking Mode")
+    st.subheader("2. Choose Booking Mode")
 
     booking_mode = st.radio(
         "Choose booking type",
@@ -1402,18 +1478,23 @@ elif page == "Reservation Simulation":
         reservation_date = now.date()
         reservation_time = now.time().replace(second=0, microsecond=0)
         expected_duration_min = 30
-        selected_time_period = "Now / Immediate"
+
+        selected_time_period = infer_demand_period_from_time(
+            reservation_time,
+            booking_mode
+        )
+
         selected_ev = "Not specified"
         driver_name = ""
         vehicle_plate = ""
 
         st.info(
-            f"Book Now selected. The simulated booking will use the current date and time: "
+            f"Book Now selected. The app will check simulated availability from the current time: "
             f"{reservation_date} at {reservation_time}."
         )
 
         st.caption(
-            "For Book Now, the app uses a default 30-minute charging session and immediate demand conditions."
+            "For Book Now, the app uses a default 30-minute charging session and automatically infers immediate demand conditions."
         )
 
     else:
@@ -1429,7 +1510,7 @@ elif page == "Reservation Simulation":
 
         with col2:
             reservation_time = st.time_input(
-                "Reservation time"
+                "Preferred reservation time"
             )
 
         col3, col4 = st.columns(2)
@@ -1443,18 +1524,20 @@ elif page == "Reservation Simulation":
                 5
             )
 
+        selected_time_period = infer_demand_period_from_time(
+            reservation_time,
+            booking_mode
+        )
+
         with col4:
-            selected_time_period = st.selectbox(
-                "Expected demand period",
-                [
-                    "Off-peak",
-                    "Morning Peak",
-                    "Daytime",
-                    "Afternoon Peak",
-                    "Evening",
-                    "Holiday / Long Weekend"
-                ]
+            st.metric(
+                "Demand Period",
+                selected_time_period
             )
+
+        st.caption(
+            f"Demand period is automatically estimated as **{selected_time_period}** based on the selected reservation time."
+        )
 
         ev_options = [
             "Tesla Model 3 RWD",
@@ -1486,7 +1569,7 @@ elif page == "Reservation Simulation":
     # Station snapshot
     # -----------------------------
 
-    st.subheader("Station Snapshot")
+    st.subheader("3. Station Snapshot")
 
     col1, col2, col3 = st.columns(3)
 
@@ -1510,114 +1593,147 @@ elif page == "Reservation Simulation":
     )
 
     # -----------------------------
-    # Simulate availability
+    # Check simulated availability
     # -----------------------------
 
-    if booking_mode == "Book Now":
-        button_label = "Check Simulated Availability Now"
-    else:
-        button_label = "Check Simulated Future Slot Availability"
+    st.subheader("4. Check Simulated Availability")
 
-    simulate_booking = st.button(button_label)
+    check_availability = st.button("Check Simulated Availability")
 
-    if simulate_booking:
+    if check_availability:
 
         station_reliability = selected_station.get("reliability_score", 0)
 
-        slot_status, slot_score = simulate_slot_availability(
+        base_score = simulate_slot_availability_score(
             station_reliability,
             selected_time_period,
             expected_duration_min
         )
 
-        st.subheader("Simulated Slot Availability Result")
-
-        col1, col2, col3 = st.columns(3)
-
-        col1.metric(
-            "Slot Status",
-            slot_status
+        slot_df = build_simulated_slots(
+            base_score,
+            booking_mode,
+            reservation_date,
+            reservation_time,
+            expected_duration_min
         )
 
-        col2.metric(
-            "Booking Confidence Score",
-            f"{slot_score}/100"
+        st.session_state["reservation_slot_df"] = slot_df
+        st.session_state["reservation_context"] = {
+            "booking_mode": booking_mode,
+            "selected_station_display": selected_station_display,
+            "selected_station_name": selected_station_name,
+            "selected_state": selected_state,
+            "selected_ev": selected_ev,
+            "driver_name": driver_name,
+            "vehicle_plate": vehicle_plate,
+            "selected_time_period": selected_time_period
+        }
+
+    # -----------------------------
+    # Show slot options and book
+    # -----------------------------
+
+    if "reservation_slot_df" in st.session_state:
+
+        slot_df = st.session_state["reservation_slot_df"]
+
+        st.subheader("5. Simulated Slot Options")
+
+        st.caption(
+            "These slots are simulated. In production, this would come from live connector-level availability from operators."
         )
 
-        col3.metric(
-            "Expected Duration",
-            f"{expected_duration_min} min"
+        st.dataframe(
+            slot_df,
+            use_container_width=True
         )
 
-        if slot_status == "Likely Available":
-            st.success(
-                "This simulated slot is likely to be available based on station reliability, demand period and expected charging duration."
-            )
-        elif slot_status == "Limited Availability":
+        available_slot_labels = slot_df.apply(
+            lambda row: (
+                f"{row['slot_option']} - {row['slot_date']} {row['slot_time']} "
+                f"({row['slot_status']}, confidence {row['booking_confidence_score']}/100)"
+            ),
+            axis=1
+        ).tolist()
+
+        selected_slot_label = st.selectbox(
+            "Select a simulated slot to book",
+            available_slot_labels
+        )
+
+        selected_slot_index = available_slot_labels.index(selected_slot_label)
+        selected_slot = slot_df.iloc[selected_slot_index]
+
+        if selected_slot["slot_status"] == "High Risk":
             st.warning(
-                "This simulated slot may have limited availability. Consider allowing extra wait time or checking another nearby station."
-            )
-        else:
-            st.error(
-                "This simulated slot has high booking risk. Consider another station or a lower-demand time."
+                "This selected slot has high booking risk. In a real app, the system would suggest choosing another time or station."
             )
 
-        # -----------------------------
-        # Simulated booking confirmation
-        # -----------------------------
+        book_selected_slot = st.button("Book Selected Simulated Slot")
 
-        st.subheader("Simulated Reservation Confirmation")
+        if book_selected_slot:
 
-        booking_code = generate_access_code()
+            booking_context = st.session_state.get("reservation_context", {})
 
-        reservation_summary = f"""
+            booking_code = generate_access_code()
+
+            st.subheader("6. Simulated Reservation Confirmation")
+
+            reservation_summary = f"""
 Reservation Type: Simulated EV Charging Slot
-Booking Mode: {booking_mode}
+Booking Mode: {booking_context.get("booking_mode", booking_mode)}
 Booking Code: EV-{booking_code}
 
-Station: {selected_station_display}
-State / Territory: {selected_state}
-Vehicle: {selected_ev}
-Driver: {driver_name if driver_name.strip() != "" else "Not provided"}
-Vehicle Plate / Reference: {vehicle_plate if vehicle_plate.strip() != "" else "Not provided"}
+Station: {booking_context.get("selected_station_display", selected_station_display)}
+State / Territory: {booking_context.get("selected_state", selected_state)}
+Vehicle: {booking_context.get("selected_ev", selected_ev)}
+Driver: {booking_context.get("driver_name", driver_name) if str(booking_context.get("driver_name", driver_name)).strip() != "" else "Not provided"}
+Vehicle Plate / Reference: {booking_context.get("vehicle_plate", vehicle_plate) if str(booking_context.get("vehicle_plate", vehicle_plate)).strip() != "" else "Not provided"}
 
-Reservation Date: {reservation_date}
-Reservation Time: {reservation_time}
-Expected Charging Duration: {expected_duration_min} minutes
-Expected Demand Period: {selected_time_period}
+Selected Slot Date: {selected_slot["slot_date"]}
+Selected Slot Time: {selected_slot["slot_time"]}
+Expected Charging Duration: {selected_slot["expected_duration_min"]} minutes
+Expected Demand Period: {booking_context.get("selected_time_period", selected_time_period)}
 
-Slot Status: {slot_status}
-Booking Confidence Score: {slot_score}/100
+Slot Status: {selected_slot["slot_status"]}
+Booking Confidence Score: {selected_slot["booking_confidence_score"]}/100
+Estimated Wait Time: {selected_slot["estimated_wait_time_min"]} minutes
 
 Important Note:
 This is a simulated reservation only. It does not reserve a real charging station.
-A production version would require operator integration, live charger availability, user accounts and payment/session control.
+A production version would require operator integration, live charger availability, user accounts, and payment/session control.
 """
 
-        st.code(reservation_summary)
+            st.success(
+                f"Simulated booking confirmed. Booking code: EV-{booking_code}"
+            )
 
-        st.download_button(
-            "Download Simulated Reservation",
-            reservation_summary,
-            file_name="simulated_ev_charging_reservation.txt"
-        )
+            st.code(reservation_summary)
 
-        st.markdown("""
-        ### How this could work in a production version
+            st.download_button(
+                "Download Simulated Reservation",
+                reservation_summary,
+                file_name="simulated_ev_charging_reservation.txt"
+            )
 
-        A real reservation system would need:
+            st.markdown("""
+            ### How this could work in a production version
 
-        - live charger availability from operators
-        - connector-level booking support
-        - user accounts
-        - payment or pre-authorisation
-        - cancellation and no-show rules
-        - charger access control
-        - integration through operator APIs or OCPI
-        - live delay handling if the driver arrives late
+            A real reservation system would need:
 
-        This prototype demonstrates the user workflow and decision logic, not real station booking.
-        """)
+            - live charger availability from operators
+            - connector-level booking support
+            - user accounts
+            - payment or pre-authorisation
+            - cancellation and no-show rules
+            - charger access control
+            - integration through operator APIs or OCPI
+            - live delay handling if the driver arrives late
+
+            This prototype demonstrates the user workflow and decision logic, not real station booking.
+            """)
+            
 # -----------------------------
 # CONGESTION RISK ANALYSIS
 # -----------------------------
