@@ -4,7 +4,7 @@
 import random  
 import math  
 import requests  
-import numpy as np
+import numpy as np 
 from datetime import datetime, timedelta
 
 import pandas as pd
