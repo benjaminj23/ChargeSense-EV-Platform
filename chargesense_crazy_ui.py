@@ -502,3 +502,11 @@ def inject_chargesense_ui():
 
 def render_chargesense_home_hero():
     render_crazy_home_hero()
+
+
+def inject_evatlas_ui():
+    inject_crazy_ui()
+
+
+def render_evatlas_home_hero():
+    render_crazy_home_hero()
