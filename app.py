@@ -1294,19 +1294,23 @@ elif page == "Reservation Simulation":
         return max(min(base_availability, 100), 0)
 
     def slot_status_from_score(score):
-        if score >= 70:
+        if score >= 55:
             return "Available"
-        elif score >= 45:
-            return "Limited"
-        return "High Risk"
+        return "Booked"
 
-    def build_simulated_slots(base_score, booking_mode, reservation_date, reservation_time, expected_duration_min):
+    def build_simulated_slots(
+        base_score,
+        booking_mode,
+        reservation_date,
+        reservation_time,
+        expected_duration_min
+    ):
         simulated_slots = []
 
         if booking_mode == "Book Now":
-            slot_offsets = [0, 15, 30]
+            slot_offsets = [0, 15, 30, 45]
         else:
-            slot_offsets = [-30, 0, 30]
+            slot_offsets = [-30, -15, 0, 15, 30, 45]
 
         for i, offset in enumerate(slot_offsets):
             slot_datetime = datetime.combine(
@@ -1316,31 +1320,29 @@ elif page == "Reservation Simulation":
 
             slot_score = base_score
 
-            if i == 0:
-                slot_score -= 10
-            elif i == 1:
-                slot_score += 5
+            # Simulate some slots being more/less likely to be available.
+            if i % 3 == 0:
+                slot_score -= 18
+            elif i % 3 == 1:
+                slot_score += 8
             else:
-                slot_score -= 3
+                slot_score -= 5
 
             slot_score = max(min(slot_score, 100), 0)
             slot_status = slot_status_from_score(slot_score)
 
             if slot_status == "Available":
-                estimated_wait = 0 if slot_score >= 80 else 5
-            elif slot_status == "Limited":
-                estimated_wait = 10
+                estimated_wait = 0 if slot_score >= 75 else 5
             else:
-                estimated_wait = 25
+                estimated_wait = None
 
             simulated_slots.append(
                 {
-                    "slot_option": f"Option {i + 1}",
                     "slot_date": slot_datetime.date(),
                     "slot_time": slot_datetime.time().replace(second=0, microsecond=0),
-                    "expected_duration_min": expected_duration_min,
                     "slot_status": slot_status,
                     "booking_confidence_score": round(slot_score, 1),
+                    "expected_duration_min": expected_duration_min,
                     "estimated_wait_time_min": estimated_wait
                 }
             )
@@ -1645,14 +1647,22 @@ elif page == "Reservation Simulation":
         )
 
         st.dataframe(
-            slot_df,
+            slot_df[
+                [
+                    "slot_date",
+                    "slot_time",
+                    "slot_status",
+                    "booking_confidence_score",
+                    "expected_duration_min",
+                    "estimated_wait_time_min"
+                ]
+            ],
             use_container_width=True
         )
 
         available_slot_labels = slot_df.apply(
             lambda row: (
-                f"{row['slot_option']} - {row['slot_date']} {row['slot_time']} "
-                f"({row['slot_status']}, confidence {row['booking_confidence_score']}/100)"
+                f"{row['slot_date']} {row['slot_time']} - {row['slot_status']}"
             ),
             axis=1
         ).tolist()
@@ -1665,14 +1675,20 @@ elif page == "Reservation Simulation":
         selected_slot_index = available_slot_labels.index(selected_slot_label)
         selected_slot = slot_df.iloc[selected_slot_index]
 
-        if selected_slot["slot_status"] == "High Risk":
+        if selected_slot["slot_status"] == "Booked":
             st.warning(
-                "This selected slot has high booking risk. In a real app, the system would suggest choosing another time or station."
+                "This slot is already booked in the simulation. Please choose an available slot."
             )
 
         book_selected_slot = st.button("Book Selected Simulated Slot")
 
         if book_selected_slot:
+
+            if selected_slot["slot_status"] == "Booked":
+                st.error(
+                    "This simulated slot is booked. Please select an available slot before booking."
+                )
+                st.stop()
 
             booking_context = st.session_state.get("reservation_context", {})
 
