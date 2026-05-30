@@ -8,7 +8,7 @@ import numpy as np
 from datetime import datetime, timedelta
 
 import pandas as pd
-import plotly.express as px
+import plotly.express as px 
 import streamlit as st 
 
 st.set_page_config(page_title="EVAtlas", layout="wide")
